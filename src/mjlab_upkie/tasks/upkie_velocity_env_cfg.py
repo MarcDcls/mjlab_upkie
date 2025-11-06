@@ -212,6 +212,12 @@ class EventCfg:
     #     },
     # )
 
+    # print_debug: EventTerm = term(
+    #     EventTerm,
+    #     func= lambda env, env_ids: print(f"{env.scene.sensors['nonfoot_ground_touch'].data.found}"),
+    #     mode="interval",
+    #     interval_range_s=(0.0, 0.0),    
+    # )
 
 @dataclass
 class EventCfgWithPushes(EventCfg):
@@ -220,9 +226,12 @@ class EventCfgWithPushes(EventCfg):
         func=mdp.push_by_setting_velocity,
         mode="interval",
         interval_range_s=(1.0, 3.0),
-        params={"velocity_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5)}},
+        params={"velocity_range": {"x": (-0.5, 0.5), "y": (0.0, 0.0)}},
     )
     
+
+# def illegal_contact(env) -> torch.Tensor:
+#     return env.scene.sensors["nonfoot_ground_touch"].data.found.norm()
 
 @dataclass
 class TerminationCfg:
@@ -230,7 +239,30 @@ class TerminationCfg:
     fell_over: DoneTerm = term(
         DoneTerm, func=mdp.bad_orientation, params={"limit_angle": math.radians(70.0)}
     )
+    illegal_contact: DoneTerm | None = term(
+        DoneTerm,
+        func=mdp_vel.illegal_contact,
+        params={"sensor_name": "nonfoot_ground_touch"},
+    )
 
+
+# @dataclass
+# class CurriculumCfg:
+#     # terrain_levels: CurrTerm | None = term(
+#     #     CurrTerm, func=mdp.terrain_levels_vel, params={"command_name": "twist"}
+#     # )
+#     command_vel: CurrTerm | None = term(
+#         CurrTerm,
+#         func=mdp.commands_vel,
+#         params={
+#         "command_name": "twist",
+#         "velocity_stages": [
+#             {"step": 0, "lin_vel_x": (-1.0, 1.0), "ang_vel_z": (-0.5, 0.5)},
+#             {"step": 5000 * 24, "lin_vel_x": (-1.5, 2.0), "ang_vel_z": (-0.7, 0.7)},
+#             {"step": 10000 * 24, "lin_vel_x": (-2.0, 3.0)},
+#         ],
+#         },
+#     )
 
 @dataclass
 class UpkieVelocityEnvCfg(ManagerBasedRlEnvCfg):
@@ -243,6 +275,7 @@ class UpkieVelocityEnvCfg(ManagerBasedRlEnvCfg):
     rewards: RewardCfg = field(default_factory=RewardCfg)
     events: EventCfgWithPushes = field(default_factory=EventCfgWithPushes)
     terminations: TerminationCfg = field(default_factory=TerminationCfg)
+    # curriculum: CurriculumCfg = field(default_factory=CurriculumCfg)
     decimation: int = 4
     episode_length_s: float = 10.0
 
@@ -251,21 +284,29 @@ class UpkieVelocityEnvCfg(ManagerBasedRlEnvCfg):
 
         self.scene.entities = {"robot": UPKIE_CFG}
 
-        # self.events.foot_friction.params["asset_cfg"].geom_names = [
-        #   "Left_Foot_collision",
-        #   "Right_Foot_collision",
-        # ]
-        # self.events.foot_friction.mode = "reset"
+        nonfoot_ground_cfg = ContactSensorCfg(
+            name="nonfoot_ground_touch",
+            primary=ContactMatch(
+                mode="geom",
+                entity="robot",
+                # Grab all collision geoms
+                pattern=r".*_collision\d*$",
+                # Except for the foot geoms.
+                exclude=tuple(["left_foot_collision", "right_foot_collision"]),
+            ),
+            secondary=ContactMatch(mode="body", pattern="terrain"),
+            fields=("found",),
+            reduce="none",
+            num_slots=1,
+        )
+        self.scene.sensors = (nonfoot_ground_cfg,)
 
-        # sensor_names = ["left_foot_ground_contact", "right_foot_ground_contact"]
-        # self.rewards.air_time.params["sensor_names"] = sensor_names
-        # self.rewards.pose.params["std"] = {
-        #   r"^(left|right)_knee_joint$": 0.6,
-        #   r"^(left|right)_hip_pitch_joint$": 0.6,
-        #   r"^(left|right)_elbow_joint$": 0.6,
-        #   r"^(left|right)_shoulder_pitch_joint$": 0.6,
-        #   r"^(?!.*(knee_joint|hip_pitch|elbow_joint|shoulder_pitch)).*$": 0.3,
-        # }
+        # self.events.foot_friction.params["asset_cfg"].geom_names = [
+        #     "left_foot_collision",
+        #     "right_foot_collision",
+        # ]
+
+        self.actions.joint_pos.scale = 0.75
 
         self.rewards.pose.params["std_standing"] = {
             "left_hip": 0.0,
@@ -283,14 +324,13 @@ class UpkieVelocityEnvCfg(ManagerBasedRlEnvCfg):
         self.scene.terrain.terrain_type = "plane"
         self.scene.terrain.terrain_generator = None
 
-        assert self.events.push_robot is not None
-        self.events.push_robot.params["velocity_range"] = {
-            "x": (-0.5, 0.5),
-            "y": (-0.5, 0.5),
-        }
-
         self.sim.nconmax = 256
         self.sim.njmax = 512
+
+
+@dataclass
+class UpkieVelocityEnvNoPushCfg(UpkieVelocityEnvCfg):
+    events: EventCfg = field(default_factory=EventCfg)  # Override to remove pushes
 
 
 @dataclass
