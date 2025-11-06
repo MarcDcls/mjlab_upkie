@@ -12,6 +12,7 @@ from mjlab.managers.manager_term_config import (
     RewardTermCfg as RewardTerm,
     TerminationTermCfg as DoneTerm,
     EventTermCfg as EventTerm,
+    CurriculumTermCfg as CurrTerm,
     term,
 )
 from mjlab.managers.scene_entity_config import SceneEntityCfg
@@ -26,10 +27,11 @@ from mjlab.envs import mdp, ManagerBasedRlEnv
 from mjlab.tasks.velocity import mdp as mdp_vel
 from mjlab.sensor import ContactMatch, ContactSensorCfg
 
-
 from mjlab.scene import SceneCfg, Scene
 from mjlab.terrains import TerrainImporterCfg
 from mjlab.terrains.config import ROUGH_TERRAINS_CFG
+
+from typing import cast, TypedDict
 
 SCENE_CFG = SceneCfg(
     terrain=TerrainImporterCfg(
@@ -156,19 +158,40 @@ def straight_legs(
     error = torch.sum(torch.square(joints_pos), dim=1)
     return torch.exp(-error / std**2)
 
+POS_CTRL_JOINTS_DEFAULT: dict[str, float] = {
+    "left_hip": 0.8,
+    "left_knee": -1.0,
+    "right_hip": -0.8,
+    "right_knee": 1.0,
+}
+
+def backward_legs(
+    env: ManagerBasedRlEnv,
+    std: float,
+) -> torch.Tensor:
+    """Reward having a backward knee angle (for style only)."""
+    joints_pos = env.sim.data.qpos[:, POSITION_JOINTS + 7]
+    target_pos = torch.tensor([
+        POS_CTRL_JOINTS_DEFAULT["left_hip"],
+        POS_CTRL_JOINTS_DEFAULT["left_knee"],
+        POS_CTRL_JOINTS_DEFAULT["right_hip"],
+        POS_CTRL_JOINTS_DEFAULT["right_knee"],
+    ], device=env.device)
+    error = torch.sum(torch.square(joints_pos - target_pos), dim=1)
+    return torch.exp(-error / std**2)
 
 @dataclass
 class RewardCfg:
     track_linear_velocity: RewardTerm = term(
         RewardTerm,
         func=mdp_vel.track_linear_velocity,
-        weight=2.5,
+        weight=2.0,
         params={"command_name": "twist", "std": math.sqrt(0.1)},
     )
     track_angular_velocity: RewardTerm = term(
         RewardTerm,
         func=mdp_vel.track_angular_velocity,
-        weight=2.0,
+        weight=2.5,
         params={"command_name": "twist", "std": math.sqrt(0.1)},
     )
     upright: RewardTerm = term(
@@ -181,7 +204,7 @@ class RewardCfg:
         },
     )
     action_rate_l2: RewardTerm = term(RewardTerm, func=mdp.action_rate_l2, weight=-0.1)
-    straight_legs: RewardTerm = term(
+    pose: RewardTerm = term(
         RewardTerm,
         func=straight_legs,
         weight=0.1,
@@ -241,10 +264,6 @@ class EventCfgWithPushes(EventCfg):
     )
 
 
-# def illegal_contact(env) -> torch.Tensor:
-#     return env.scene.sensors["nonfoot_ground_touch"].data.found.norm()
-
-
 @dataclass
 class TerminationCfg:
     time_out: DoneTerm = term(DoneTerm, func=mdp.time_out, time_out=True)
@@ -256,23 +275,48 @@ class TerminationCfg:
     )
 
 
-# @dataclass
-# class CurriculumCfg:
-#     # terrain_levels: CurrTerm | None = term(
-#     #     CurrTerm, func=mdp.terrain_levels_vel, params={"command_name": "twist"}
-#     # )
-#     command_vel: CurrTerm | None = term(
-#         CurrTerm,
-#         func=mdp.commands_vel,
-#         params={
-#         "command_name": "twist",
-#         "velocity_stages": [
-#             {"step": 0, "lin_vel_x": (-1.0, 1.0), "ang_vel_z": (-0.5, 0.5)},
-#             {"step": 5000 * 24, "lin_vel_x": (-1.5, 2.0), "ang_vel_z": (-0.7, 0.7)},
-#             {"step": 10000 * 24, "lin_vel_x": (-2.0, 3.0)},
-#         ],
-#         },
-#     )
+class PushIntensityStage(TypedDict):
+  step: int
+  velocity_range_x: tuple[float, float] | None
+  velocity_range_y: tuple[float, float] | None
+
+# def increase_push_intensity(
+#     env: ManagerBasedRlEnv,
+#     env_ids: torch.Tensor,
+#     event_name: str,
+#     intensities: list[PushIntensityStage],
+#     ) -> None:
+#     event_cfg = env.event_manager.get_term_cfg(event_name)
+#     assert event_cfg is not None
+#     cfg = cast(UpkieVelocityEnvCfg, event_cfg)
+#     for stage in intensities:
+#         if env.common_step_counter > stage["step"]:
+#         if "velocity_range_x" in stage and stage["velocity_range_x"] is not None:
+#             cfg.ranges.velocity_range_x = stage["velocity_range_x"]
+#         if "velocity_range_y" in stage and stage["velocity_range_y"] is not None:
+#             cfg.ranges.velocity_range_y = stage["velocity_range_y"]
+
+@dataclass
+class CurriculumCfg:
+    pass
+    # push_intensity: CurrTerm | None = term(
+    #     CurrTerm, func=increase_push_intensity, params={"event_name": "push_robot"}
+    # )
+    # terrain_levels: CurrTerm | None = term(
+    #     CurrTerm, func=mdp.terrain_levels_vel, params={"command_name": "twist"}
+    # )
+    # command_vel: CurrTerm | None = term(
+    #     CurrTerm,
+    #     func=mdp_vel.commands_vel,
+    #     params={
+    #     "command_name": "twist",
+    #     "velocity_stages": [
+    #         {"step": 0, "lin_vel_x": (-1.0, 1.0), "ang_vel_z": (-0.5, 0.5)},
+    #         {"step": 5000 * 24, "lin_vel_x": (-1.5, 2.0), "ang_vel_z": (-0.7, 0.7)},
+    #         {"step": 10000 * 24, "lin_vel_x": (-2.0, 3.0)},
+    #     ],
+    #     },
+    # )
 
 
 @dataclass
@@ -288,7 +332,7 @@ class UpkieVelocityEnvCfg(ManagerBasedRlEnvCfg):
     terminations: TerminationCfg = field(default_factory=TerminationCfg)
     # curriculum: CurriculumCfg = field(default_factory=CurriculumCfg)
     decimation: int = 4
-    episode_length_s: float = 10.0
+    episode_length_s: float = 20.0
 
     def __post_init__(self):
         self.events.reset_base.params["pose_range"]["z"] = (0.58, 0.6)
@@ -336,8 +380,15 @@ class UpkieVelocityEnvNoPushCfg(UpkieVelocityEnvCfg):
 
 
 @dataclass
+class UpkieVelocityEnvLegsBackwardCfg(UpkieVelocityEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        self.rewards.pose.func = backward_legs  # Modify the pose reward to favor backward legs
+
+
+@dataclass
 class UpkieVelocityEnvCfg_PLAY(UpkieVelocityEnvCfg):
-    episode_length_s: float = 1e9
+    episode_length_s: float = 1e9  # Very long episodes for PLAY mode
 
 
 @dataclass
