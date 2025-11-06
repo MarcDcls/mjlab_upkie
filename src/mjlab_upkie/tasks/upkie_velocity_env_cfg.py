@@ -159,8 +159,8 @@ def straight_legs(
     return torch.exp(-error / std**2)
 
 POS_CTRL_JOINTS_DEFAULT: dict[str, float] = {
-    "left_hip": 0.8,
-    "left_knee": -1.0,
+    "left_hip": -0.8,
+    "left_knee": 1.0,
     "right_hip": -0.8,
     "right_knee": 1.0,
 }
