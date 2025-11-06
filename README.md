@@ -9,7 +9,7 @@ uv sync
 ## Training an agent
 
 ```
-uv run train Mjlab-Velocity-Upkie --env.scene.num-envs 2048
+uv run train Mjlab-Velocity-Upkie --env.scene.num-envs 4096
 ```
 
 
