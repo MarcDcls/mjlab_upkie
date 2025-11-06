@@ -7,12 +7,12 @@ import numpy as np
 
 from mjlab.envs import ManagerBasedRlEnvCfg
 from mjlab.managers.manager_term_config import (
-  ObservationGroupCfg as ObsGroup,
-  ObservationTermCfg as ObsTerm,
-  RewardTermCfg as RewardTerm,
-  TerminationTermCfg as DoneTerm,
-  EventTermCfg as EventTerm,
-  term,
+    ObservationGroupCfg as ObsGroup,
+    ObservationTermCfg as ObsTerm,
+    RewardTermCfg as RewardTerm,
+    TerminationTermCfg as DoneTerm,
+    EventTermCfg as EventTerm,
+    term,
 )
 from mjlab.managers.scene_entity_config import SceneEntityCfg
 from mjlab.scene import SceneCfg
@@ -21,7 +21,7 @@ from mjlab.viewer import ViewerConfig
 from mjlab_upkie.robot.upkie_constants import UPKIE_CFG
 from mjlab.rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, RslRlPpoAlgorithmCfg
 from mjlab.third_party.isaaclab.isaaclab.utils.math import sample_uniform
-from mjlab.envs import mdp
+from mjlab.envs import mdp, ManagerBasedRlEnv
 
 from mjlab.tasks.velocity import mdp as mdp_vel
 from mjlab.sensor import ContactMatch, ContactSensorCfg
@@ -32,13 +32,13 @@ from mjlab.terrains import TerrainImporterCfg
 from mjlab.terrains.config import ROUGH_TERRAINS_CFG
 
 SCENE_CFG = SceneCfg(
-  terrain=TerrainImporterCfg(
-    terrain_type="generator",
-    terrain_generator=ROUGH_TERRAINS_CFG,
-    max_init_terrain_level=0,
-  ),
-  num_envs=1,
-  extent=2.0,
+    terrain=TerrainImporterCfg(
+        terrain_type="generator",
+        terrain_generator=ROUGH_TERRAINS_CFG,
+        max_init_terrain_level=0,
+    ),
+    num_envs=1,
+    extent=2.0,
 )
 
 VIEWER_CONFIG = ViewerConfig(
@@ -52,7 +52,7 @@ VIEWER_CONFIG = ViewerConfig(
 
 SIM_CFG = SimulationCfg(
     mujoco=MujocoCfg(
-        timestep=0.02,
+        timestep=0.005,
         iterations=1,
     ),
 )
@@ -71,6 +71,15 @@ RIGHT_WHEEL = 5
 POSITION_JOINTS = np.array([LEFT_HIP, LEFT_KNEE, RIGHT_HIP, RIGHT_KNEE])
 VELOCITY_JOINTS = np.array([LEFT_WHEEL, RIGHT_WHEEL])
 
+# Having different action scales for the wheels and legs seems to have no effect
+UPKIE_ACTION_SCALE: dict[str, float] = {
+    "left_hip": 1.0,
+    "left_knee": 1.0,
+    "right_hip": 1.0,
+    "right_knee": 1.0,
+    "left_wheel": 1.0,
+    "right_wheel": 1.0,
+}
 
 @dataclass
 class ActionCfg:
@@ -78,10 +87,10 @@ class ActionCfg:
         mdp.JointPositionActionCfg,
         asset_name="robot",
         actuator_names=[".*"],
-        scale=20.0,
+        scale=UPKIE_ACTION_SCALE,
         use_default_offset=False,
     )
-
+    
 
 @dataclass
 class CommandsCfg:
@@ -107,22 +116,28 @@ class CommandsCfg:
 class ObservationCfg:
     @dataclass
     class PolicyCfg(ObsGroup):
-        joints_pos: ObsTerm = term(ObsTerm, func=lambda env: env.sim.data.qpos[:, POSITION_JOINTS+7]) # Position of the POS_CTRL_JOINT_NAMES
-        joints_vel: ObsTerm = term(ObsTerm, func=lambda env: env.sim.data.qvel[:, VELOCITY_JOINTS+6]) # Velocity of the VEL_CTRL_JOINT_NAMES
-        trunk_imu: ObsTerm = term(ObsTerm, func=lambda env: env.sim.data.qpos[:, 3:7])                # Quaternion of the trunk
-        trunk_gyro: ObsTerm = term(ObsTerm, func=lambda env: env.sim.data.qvel[:, 3:6])               # Angular velocity of the trunk
+        joints_pos: ObsTerm = term(
+            ObsTerm, func=lambda env: env.sim.data.qpos[:, POSITION_JOINTS + 7]
+        )  # Position of the POS_CTRL_JOINT_NAMES
+        joints_vel: ObsTerm = term(
+            ObsTerm, func=lambda env: env.sim.data.qvel[:, VELOCITY_JOINTS + 6]
+        )  # Velocity of the VEL_CTRL_JOINT_NAMES
+        trunk_imu: ObsTerm = term(ObsTerm, func=lambda env: env.sim.data.qpos[:, 3:7])  # Quaternion of the trunk
+        trunk_gyro: ObsTerm = term(
+            ObsTerm, func=lambda env: env.sim.data.qvel[:, 3:6]
+        )  # Angular velocity of the trunk
 
         actions: ObsTerm = term(ObsTerm, func=mdp.last_action)
-        command: ObsTerm = term(
-        ObsTerm, func=mdp.generated_commands, params={"command_name": "twist"}
-        )
+        command: ObsTerm = term(ObsTerm, func=mdp.generated_commands, params={"command_name": "twist"})
 
         def __post_init__(self):
             self.enable_corruption = True
 
     @dataclass
     class CriticCfg(PolicyCfg):
-        trunk_lin_vel: ObsTerm = term(ObsTerm, func=lambda env: env.sim.data.qvel[:, 0:3])            # Linear velocity of the trunk
+        trunk_lin_vel: ObsTerm = term(
+            ObsTerm, func=lambda env: env.sim.data.qvel[:, 0:3]
+        )  # Linear velocity of the trunk
 
         def __post_init__(self):
             super().__post_init__()
@@ -132,51 +147,46 @@ class ObservationCfg:
     critic: CriticCfg = field(default_factory=CriticCfg)
 
 
+def straight_legs(
+    env: ManagerBasedRlEnv,
+    std: float,
+) -> torch.Tensor:
+    """Reward straightening the legs (robot standing upright)."""
+    joints_pos = env.sim.data.qpos[:, POSITION_JOINTS + 7]
+    error = torch.sum(torch.square(joints_pos), dim=1)
+    return torch.exp(-error / std**2)
+
+
 @dataclass
 class RewardCfg:
     track_linear_velocity: RewardTerm = term(
         RewardTerm,
         func=mdp_vel.track_linear_velocity,
-        weight=2.0,
-        params={"command_name": "twist", "std": math.sqrt(0.25)},
+        weight=2.5,
+        params={"command_name": "twist", "std": math.sqrt(0.1)},
     )
     track_angular_velocity: RewardTerm = term(
         RewardTerm,
         func=mdp_vel.track_angular_velocity,
         weight=2.0,
-        params={"command_name": "twist", "std": math.sqrt(0.5)},
+        params={"command_name": "twist", "std": math.sqrt(0.1)},
     )
     upright: RewardTerm = term(
         RewardTerm,
         func=mdp_vel.flat_orientation,
         weight=1.0,
         params={
-        "std": math.sqrt(0.2),
-        "asset_cfg": SceneEntityCfg("robot", body_names=[]),  # Override in robot cfg.
+            "std": math.sqrt(0.2),
+            "asset_cfg": SceneEntityCfg("robot", body_names=[]),  # Override in robot cfg.
         },
     )
-    pose: RewardTerm = term(
+    action_rate_l2: RewardTerm = term(RewardTerm, func=mdp.action_rate_l2, weight=-0.1)
+    straight_legs: RewardTerm = term(
         RewardTerm,
-        func=mdp_vel.variable_posture,
-        weight=1.0,
-        params={
-        "asset_cfg": SceneEntityCfg("robot", joint_names=POS_CTRL_JOINT_NAMES),
-        "command_name": "twist",
-        "std_standing": {},  # Override in robot cfg.
-        "std_walking": {},   # Override in robot cfg.
-        "std_running": {},   # Override in robot cfg.
-        "walking_threshold": 0.05,  # m/s
-        "running_threshold": 1.5,   # m/s
-        },
+        func=straight_legs,
+        weight=0.1,
+        params={"std": math.sqrt(0.1)},
     )
-    # body_ang_vel: RewardTerm = term(
-    #     RewardTerm,
-    #     func=mdp_vel.body_angular_velocity_penalty,
-    #     weight=-0.05,
-    #     params={
-    #     "asset_cfg": SceneEntityCfg("robot", body_names=[]),  # Override in robot cfg.
-    #     },
-    # )
 
 
 @dataclass
@@ -186,8 +196,8 @@ class EventCfg:
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
-        "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-3.14, 3.14)},
-        "velocity_range": {},
+            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-3.14, 3.14)},
+            "velocity_range": {},
         },
     )
     reset_robot_joints: EventTerm = term(
@@ -195,29 +205,30 @@ class EventCfg:
         func=mdp.reset_joints_by_offset,
         mode="reset",
         params={
-        "position_range": (0.0, 0.0),
-        "velocity_range": (0.0, 0.0),
-        "asset_cfg": SceneEntityCfg("robot", joint_names=[".*"]),
+            "position_range": (0.0, 0.0),
+            "velocity_range": (0.0, 0.0),
+            "asset_cfg": SceneEntityCfg("robot", joint_names=[".*"]),
         },
     )
-    # foot_friction: EventTerm = term(
-    #     EventTerm,
-    #     mode="startup",
-    #     func=mdp.randomize_field,
-    #     params={
-    #     "asset_cfg": SceneEntityCfg("robot", geom_names=[]),  # Override in robot cfg.
-    #     "operation": "abs",
-    #     "field": "geom_friction",
-    #     "ranges": (0.3, 1.2),
-    #     },
-    # )
+    foot_friction: EventTerm = term(
+        EventTerm,
+        mode="startup",
+        func=mdp.randomize_field,
+        params={
+        "asset_cfg": SceneEntityCfg("robot", geom_names=[]),  # Override in robot cfg.
+        "operation": "abs",
+        "field": "geom_friction",
+        "ranges": (0.8, 1.2),
+        },
+    )
 
     # print_debug: EventTerm = term(
     #     EventTerm,
-    #     func= lambda env, env_ids: print(f"{env.scene.sensors['nonfoot_ground_touch'].data.found}"),
+    #     func= lambda env, env_ids: print(f"{env.sim.data.qpos[:, :3]}"),
     #     mode="interval",
-    #     interval_range_s=(0.0, 0.0),    
+    #     interval_range_s=(0.0, 0.0),
     # )
+
 
 @dataclass
 class EventCfgWithPushes(EventCfg):
@@ -228,17 +239,16 @@ class EventCfgWithPushes(EventCfg):
         interval_range_s=(1.0, 3.0),
         params={"velocity_range": {"x": (-0.5, 0.5), "y": (0.0, 0.0)}},
     )
-    
+
 
 # def illegal_contact(env) -> torch.Tensor:
 #     return env.scene.sensors["nonfoot_ground_touch"].data.found.norm()
 
+
 @dataclass
 class TerminationCfg:
     time_out: DoneTerm = term(DoneTerm, func=mdp.time_out, time_out=True)
-    fell_over: DoneTerm = term(
-        DoneTerm, func=mdp.bad_orientation, params={"limit_angle": math.radians(70.0)}
-    )
+    fell_over: DoneTerm = term(DoneTerm, func=mdp.bad_orientation, params={"limit_angle": math.radians(70.0)})
     illegal_contact: DoneTerm | None = term(
         DoneTerm,
         func=mdp_vel.illegal_contact,
@@ -264,6 +274,7 @@ class TerminationCfg:
 #         },
 #     )
 
+
 @dataclass
 class UpkieVelocityEnvCfg(ManagerBasedRlEnvCfg):
     scene: SceneCfg = field(default_factory=lambda: SCENE_CFG)
@@ -280,7 +291,7 @@ class UpkieVelocityEnvCfg(ManagerBasedRlEnvCfg):
     episode_length_s: float = 10.0
 
     def __post_init__(self):
-        self.events.reset_base.params["pose_range"]["z"] = (0.5, 0.6) # Does it change the robot initial height?
+        self.events.reset_base.params["pose_range"]["z"] = (0.58, 0.6)
 
         self.scene.entities = {"robot": UPKIE_CFG}
 
@@ -301,21 +312,12 @@ class UpkieVelocityEnvCfg(ManagerBasedRlEnvCfg):
         )
         self.scene.sensors = (nonfoot_ground_cfg,)
 
-        # self.events.foot_friction.params["asset_cfg"].geom_names = [
-        #     "left_foot_collision",
-        #     "right_foot_collision",
-        # ]
+        self.events.foot_friction.params["asset_cfg"].geom_names = [
+            "left_foot_collision",
+            "right_foot_collision",
+        ]
 
         self.actions.joint_pos.scale = 0.75
-
-        self.rewards.pose.params["std_standing"] = {
-            "left_hip": 0.0,
-            "right_hip": 0.0,
-            "left_knee": 0.0,
-            "right_knee": 0.0,
-        }
-        self.rewards.pose.params["std_walking"] = self.rewards.pose.params["std_standing"]
-        self.rewards.pose.params["std_running"] = self.rewards.pose.params["std_walking"]
 
         self.viewer.body_name = "trunk"
         self.commands.twist.viz.z_offset = 0.75
@@ -368,6 +370,6 @@ class UpkieCfg(RslRlOnPolicyRunnerCfg):
     )
     wandb_project: str = "mjlab_upkie"
     experiment_name: str = "upkie_velocity"
-    save_interval: int = 500
+    save_interval: int = 250
     num_steps_per_env: int = 24
     max_iterations: int = 30_000
