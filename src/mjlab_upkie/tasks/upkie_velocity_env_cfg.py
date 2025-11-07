@@ -342,7 +342,7 @@ class CurriculumCfg:
     push_intensity: CurrTerm | None = term(
         CurrTerm,
         func=increase_push_intensity,
-        params={"intensities": [(1000 * 24, 1000.0), (10000 * 24, 2.0), (15000 * 24, 3.0)]},
+        params={"intensities": [(5000 * 24, 1.0), (10000 * 24, 2.0), (15000 * 24, 3.0)]},
     )
     # terrain_levels: CurrTerm | None = term(
     #     CurrTerm, func=mdp_vel.terrain_levels_vel, params={"command_name": "twist"}
