@@ -124,13 +124,13 @@
     <actuator>
         <position joint="left_hip" name="left_hip" kp="3" kv="0.1" ctrlrange="-1.26 1.26"
             forcerange="-16 16" />
-        <position joint="left_knee" name="left_knee" kp="2" kv="0.1" ctrlrange="-2.51 2.51"
+        <position joint="left_knee" name="left_knee" kp="3" kv="0.1" ctrlrange="-2.51 2.51"
             forcerange="-16 16" />
         <velocity joint="left_wheel" name="left_wheel" kv="5" forcerange="-1.7 1.7" />
 
         <position joint="right_hip" name="right_hip" kp="3" kv="0.1" ctrlrange="-1.26 1.26"
             forcerange="-16 16" />
-        <position joint="right_knee" name="right_knee" kp="2" kv="0.1" ctrlrange="-2.51 2.51"
+        <position joint="right_knee" name="right_knee" kp="3" kv="0.1" ctrlrange="-2.51 2.51"
             forcerange="-16 16" />
         <velocity joint="right_wheel" name="right_wheel" kv="5" forcerange="-1.7 1.7" />
     </actuator>
