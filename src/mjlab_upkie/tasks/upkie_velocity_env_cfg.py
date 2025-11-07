@@ -23,6 +23,7 @@ from mjlab_upkie.robot.upkie_constants import UPKIE_CFG
 from mjlab.rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, RslRlPpoAlgorithmCfg
 from mjlab.third_party.isaaclab.isaaclab.utils.math import sample_uniform
 from mjlab.envs import mdp, ManagerBasedRlEnv
+from mjlab.envs.manager_based_env import ManagerBasedEnv
 
 from mjlab.tasks.velocity import mdp as mdp_vel
 from mjlab.sensor import ContactMatch, ContactSensorCfg
@@ -32,6 +33,11 @@ from mjlab.terrains import TerrainImporterCfg
 from mjlab.terrains.config import ROUGH_TERRAINS_CFG
 
 from typing import cast, TypedDict
+
+from mjlab.third_party.isaaclab.isaaclab.utils.math import (
+    quat_apply_inverse,
+    sample_uniform,
+)
 
 SCENE_CFG = SceneCfg(
     terrain=TerrainImporterCfg(
@@ -83,6 +89,7 @@ UPKIE_ACTION_SCALE: dict[str, float] = {
     "right_wheel": 1.0,
 }
 
+
 @dataclass
 class ActionCfg:
     joint_pos: mdp.JointPositionActionCfg = term(
@@ -92,7 +99,7 @@ class ActionCfg:
         scale=UPKIE_ACTION_SCALE,
         use_default_offset=False,
     )
-    
+
 
 @dataclass
 class CommandsCfg:
@@ -158,12 +165,14 @@ def straight_legs(
     error = torch.sum(torch.square(joints_pos), dim=1)
     return torch.exp(-error / std**2)
 
+
 POS_CTRL_JOINTS_DEFAULT: dict[str, float] = {
-    "left_hip": -0.8,
-    "left_knee": 1.0,
-    "right_hip": -0.8,
-    "right_knee": 1.0,
+    "left_hip": 0.75,
+    "left_knee": -1.4,
+    "right_hip": -0.75,
+    "right_knee": 1.4,
 }
+
 
 def backward_legs(
     env: ManagerBasedRlEnv,
@@ -171,14 +180,18 @@ def backward_legs(
 ) -> torch.Tensor:
     """Reward having a backward knee angle (for style only)."""
     joints_pos = env.sim.data.qpos[:, POSITION_JOINTS + 7]
-    target_pos = torch.tensor([
-        POS_CTRL_JOINTS_DEFAULT["left_hip"],
-        POS_CTRL_JOINTS_DEFAULT["left_knee"],
-        POS_CTRL_JOINTS_DEFAULT["right_hip"],
-        POS_CTRL_JOINTS_DEFAULT["right_knee"],
-    ], device=env.device)
+    target_pos = torch.tensor(
+        [
+            POS_CTRL_JOINTS_DEFAULT["left_hip"],
+            POS_CTRL_JOINTS_DEFAULT["left_knee"],
+            POS_CTRL_JOINTS_DEFAULT["right_hip"],
+            POS_CTRL_JOINTS_DEFAULT["right_knee"],
+        ],
+        device=env.device,
+    )
     error = torch.sum(torch.square(joints_pos - target_pos), dim=1)
     return torch.exp(-error / std**2)
+
 
 @dataclass
 class RewardCfg:
@@ -212,6 +225,34 @@ class RewardCfg:
     )
 
 
+def reset_legs_backward(
+    env: ManagerBasedRlEnv,
+    env_ids: torch.Tensor,
+) -> None:
+    """Reset robot joints with legs backward"""
+    env.sim.data.qpos[:, 7 + LEFT_HIP] = POS_CTRL_JOINTS_DEFAULT["left_hip"]
+    env.sim.data.qpos[:, 7 + LEFT_KNEE] = POS_CTRL_JOINTS_DEFAULT["left_knee"]
+    env.sim.data.qpos[:, 7 + RIGHT_HIP] = POS_CTRL_JOINTS_DEFAULT["right_hip"]
+    env.sim.data.qpos[:, 7 + RIGHT_KNEE] = POS_CTRL_JOINTS_DEFAULT["right_knee"]
+
+
+def push_by_setting_velocity(
+    env: ManagerBasedEnv,
+    env_ids: torch.Tensor,
+    velocity_range: dict[str, tuple[float, float]],
+    intensity: float = 1.0,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> None:
+    asset: mdp_vel.Entity = env.scene[asset_cfg.name]
+    vel_w = asset.data.root_link_vel_w[env_ids]
+    quat_w = asset.data.root_link_quat_w[env_ids]
+    range_list = [velocity_range.get(key, (0.0, 0.0)) for key in ["x", "y", "z", "roll", "pitch", "yaw"]]
+    ranges = torch.tensor(range_list, device=env.device)
+    vel_w += sample_uniform(intensity * ranges[:, 0], intensity * ranges[:, 1], vel_w.shape, device=env.device)
+    vel_w[:, 3:] = quat_apply_inverse(quat_w, vel_w[:, 3:])
+    asset.write_root_link_velocity_to_sim(vel_w, env_ids=env_ids)
+
+
 @dataclass
 class EventCfg:
     reset_base: EventTerm = term(
@@ -219,7 +260,7 @@ class EventCfg:
         func=mdp.reset_root_state_uniform,
         mode="reset",
         params={
-            "pose_range": {"x": (-0.5, 0.5), "y": (-0.5, 0.5), "yaw": (-3.14, 3.14)},
+            "pose_range": {"x": (0, 0), "y": (0, 0), "yaw": (-math.pi, math.pi)},
             "velocity_range": {},
         },
     )
@@ -238,11 +279,18 @@ class EventCfg:
         mode="startup",
         func=mdp.randomize_field,
         params={
-        "asset_cfg": SceneEntityCfg("robot", geom_names=[]),  # Override in robot cfg.
-        "operation": "abs",
-        "field": "geom_friction",
-        "ranges": (0.8, 1.2),
+            "asset_cfg": SceneEntityCfg("robot", geom_names=[]),  # Override in robot cfg.
+            "operation": "abs",
+            "field": "geom_friction",
+            "ranges": (0.8, 1.2),
         },
+    )
+    push_robot: EventTerm | None = term(
+        EventTerm,
+        func=push_by_setting_velocity,
+        mode="interval",
+        interval_range_s=(1.0, 3.0),
+        params={"velocity_range": {"x": (-0.3, 0.3), "y": (0.0, 0.0)}, "intensity": 0.0},
     )
 
     # print_debug: EventTerm = term(
@@ -251,17 +299,6 @@ class EventCfg:
     #     mode="interval",
     #     interval_range_s=(0.0, 0.0),
     # )
-
-
-@dataclass
-class EventCfgWithPushes(EventCfg):
-    push_robot: EventTerm | None = term(
-        EventTerm,
-        func=mdp.push_by_setting_velocity,
-        mode="interval",
-        interval_range_s=(1.0, 3.0),
-        params={"velocity_range": {"x": (-0.5, 0.5), "y": (0.0, 0.0)}},
-    )
 
 
 @dataclass
@@ -275,35 +312,40 @@ class TerminationCfg:
     )
 
 
-class PushIntensityStage(TypedDict):
-  step: int
-  velocity_range_x: tuple[float, float] | None
-  velocity_range_y: tuple[float, float] | None
+def increase_push_intensity(
+    env: ManagerBasedRlEnv,
+    env_ids: torch.Tensor,
+    intensities: list[tuple[float, float]],
+) -> None:
+    push_event_cfg = env.event_manager.get_term_cfg("push_robot")
+    for step_threshold, intensity in intensities:
+        if env.common_step_counter >= step_threshold:
+            push_event_cfg.params["intensity"] = intensity
 
-# def increase_push_intensity(
-#     env: ManagerBasedRlEnv,
-#     env_ids: torch.Tensor,
-#     event_name: str,
-#     intensities: list[PushIntensityStage],
-#     ) -> None:
-#     event_cfg = env.event_manager.get_term_cfg(event_name)
-#     assert event_cfg is not None
-#     cfg = cast(UpkieVelocityEnvCfg, event_cfg)
-#     for stage in intensities:
-#         if env.common_step_counter > stage["step"]:
-#         if "velocity_range_x" in stage and stage["velocity_range_x"] is not None:
-#             cfg.ranges.velocity_range_x = stage["velocity_range_x"]
-#         if "velocity_range_y" in stage and stage["velocity_range_y"] is not None:
-#             cfg.ranges.velocity_range_y = stage["velocity_range_y"]
+    # # Get first environment's rewards
+    # mean_reward = 0.0
+    # for env_id in env_ids:
+    #     first_reward_term = env.reward_manager.get_active_iterable_terms(env_id)
+    #     reward_sum = 0.0
+    #     for name, values in first_reward_term:
+    #         reward_sum += values[0]
+    #     mean_reward += reward_sum/len(env_ids)
+    # # print(f"Curriculum: reward sum = {mean_reward}")
+
+    # # Set push intensity based on reward sum
+    # if mean_reward > intensities[0][0]:
+    #     push_event_cfg.params["intensity"] = intensities[0][1]
+
 
 @dataclass
 class CurriculumCfg:
-    pass
-    # push_intensity: CurrTerm | None = term(
-    #     CurrTerm, func=increase_push_intensity, params={"event_name": "push_robot"}
-    # )
+    push_intensity: CurrTerm | None = term(
+        CurrTerm,
+        func=increase_push_intensity,
+        params={"intensities": [(1000 * 24, 1000.0), (10000 * 24, 2.0), (15000 * 24, 3.0)]},
+    )
     # terrain_levels: CurrTerm | None = term(
-    #     CurrTerm, func=mdp.terrain_levels_vel, params={"command_name": "twist"}
+    #     CurrTerm, func=mdp_vel.terrain_levels_vel, params={"command_name": "twist"}
     # )
     # command_vel: CurrTerm | None = term(
     #     CurrTerm,
@@ -328,14 +370,13 @@ class UpkieVelocityEnvCfg(ManagerBasedRlEnvCfg):
     commands: CommandsCfg = field(default_factory=CommandsCfg)
     observations: ObservationCfg = field(default_factory=ObservationCfg)
     rewards: RewardCfg = field(default_factory=RewardCfg)
-    events: EventCfgWithPushes = field(default_factory=EventCfgWithPushes)
+    events: EventCfg = field(default_factory=EventCfg)
     terminations: TerminationCfg = field(default_factory=TerminationCfg)
-    # curriculum: CurriculumCfg = field(default_factory=CurriculumCfg)
     decimation: int = 4
     episode_length_s: float = 20.0
 
     def __post_init__(self):
-        self.events.reset_base.params["pose_range"]["z"] = (0.58, 0.6)
+        self.events.reset_base.params["pose_range"]["z"] = (0.56, 0.56)
 
         self.scene.entities = {"robot": UPKIE_CFG}
 
@@ -375,19 +416,50 @@ class UpkieVelocityEnvCfg(ManagerBasedRlEnvCfg):
 
 
 @dataclass
-class UpkieVelocityEnvNoPushCfg(UpkieVelocityEnvCfg):
-    events: EventCfg = field(default_factory=EventCfg)  # Override to remove pushes
+class UpkieVelocityEnvWithPushCfg(UpkieVelocityEnvCfg):
+    curriculum: CurriculumCfg = field(default_factory=CurriculumCfg)  # Add curriculum to increase push intensity
+
+    # def __post_init__(self):
+    #     super().__post_init__()
+
+    #     # Enable pushes
+    #     self.events.push_robot.params["intensity"] = 1.0
 
 
 @dataclass
 class UpkieVelocityEnvLegsBackwardCfg(UpkieVelocityEnvCfg):
     def __post_init__(self):
         super().__post_init__()
-        self.rewards.pose.func = backward_legs  # Modify the pose reward to favor backward legs
+
+        # Reset robot in default pose (with legs backward)
+        self.events.reset_base.params["pose_range"]["z"] = (0.48, 0.48)
+        self.events.reset_robot_joints.func = reset_legs_backward
+        self.events.reset_robot_joints.params = {}
+
+        # Modify the pose reward to favor backward legs
+        self.rewards.pose.func = backward_legs
+        self.rewards.pose.weight = 0.3
+        self.rewards.pose.params = {"std": math.sqrt(0.5)}
+
+
+@dataclass
+class UpkieVelocityEnvLegsBackwardWithPushCfg(UpkieVelocityEnvLegsBackwardCfg):
+    curriculum: CurriculumCfg = field(default_factory=CurriculumCfg)  # Add curriculum to increase push intensity
+
+    # def __post_init__(self):
+    #     super().__post_init__()
+
+    #     # Enable pushes
+    #     self.events.push_robot.params["intensity"] = 1.0
 
 
 @dataclass
 class UpkieVelocityEnvCfg_PLAY(UpkieVelocityEnvCfg):
+    episode_length_s: float = 1e9  # Very long episodes for PLAY mode
+
+
+@dataclass
+class UpkieVelocityEnvLegsBackwardCfg_PLAY(UpkieVelocityEnvLegsBackwardCfg):
     episode_length_s: float = 1e9  # Very long episodes for PLAY mode
 
 
