@@ -20,7 +20,11 @@ from mjlab.scene import SceneCfg
 from mjlab.sim import MujocoCfg, SimulationCfg
 from mjlab.viewer import ViewerConfig
 from mjlab_upkie.robot.upkie_constants import UPKIE_CFG
-from mjlab.rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, RslRlPpoAlgorithmCfg
+from mjlab.rl import (
+    RslRlOnPolicyRunnerCfg,
+    RslRlPpoActorCriticCfg,
+    RslRlPpoAlgorithmCfg,
+)
 from mjlab.third_party.isaaclab.isaaclab.utils.math import sample_uniform
 from mjlab.envs import mdp, ManagerBasedRlEnv
 from mjlab.envs.manager_based_env import ManagerBasedEnv
@@ -131,13 +135,17 @@ class ObservationCfg:
         joints_vel: ObsTerm = term(
             ObsTerm, func=lambda env: env.sim.data.qvel[:, VELOCITY_JOINTS + 6]
         )  # Velocity of the VEL_CTRL_JOINT_NAMES
-        trunk_imu: ObsTerm = term(ObsTerm, func=lambda env: env.sim.data.qpos[:, 3:7])  # Quaternion of the trunk
+        trunk_imu: ObsTerm = term(
+            ObsTerm, func=lambda env: env.sim.data.qpos[:, 3:7]
+        )  # Quaternion of the trunk
         trunk_gyro: ObsTerm = term(
             ObsTerm, func=lambda env: env.sim.data.qvel[:, 3:6]
         )  # Angular velocity of the trunk
 
         actions: ObsTerm = term(ObsTerm, func=mdp.last_action)
-        command: ObsTerm = term(ObsTerm, func=mdp.generated_commands, params={"command_name": "twist"})
+        command: ObsTerm = term(
+            ObsTerm, func=mdp.generated_commands, params={"command_name": "twist"}
+        )
 
         def __post_init__(self):
             self.enable_corruption = True
@@ -213,7 +221,9 @@ class RewardCfg:
         weight=1.0,
         params={
             "std": math.sqrt(0.2),
-            "asset_cfg": SceneEntityCfg("robot", body_names=[]),  # Override in robot cfg.
+            "asset_cfg": SceneEntityCfg(
+                "robot", body_names=[]
+            ),  # Override in robot cfg.
         },
     )
     action_rate_l2: RewardTerm = term(RewardTerm, func=mdp.action_rate_l2, weight=-0.1)
@@ -246,9 +256,17 @@ def push_by_setting_velocity(
     asset: mdp_vel.Entity = env.scene[asset_cfg.name]
     vel_w = asset.data.root_link_vel_w[env_ids]
     quat_w = asset.data.root_link_quat_w[env_ids]
-    range_list = [velocity_range.get(key, (0.0, 0.0)) for key in ["x", "y", "z", "roll", "pitch", "yaw"]]
+    range_list = [
+        velocity_range.get(key, (0.0, 0.0))
+        for key in ["x", "y", "z", "roll", "pitch", "yaw"]
+    ]
     ranges = torch.tensor(range_list, device=env.device)
-    vel_w += sample_uniform(intensity * ranges[:, 0], intensity * ranges[:, 1], vel_w.shape, device=env.device)
+    vel_w += sample_uniform(
+        intensity * ranges[:, 0],
+        intensity * ranges[:, 1],
+        vel_w.shape,
+        device=env.device,
+    )
     vel_w[:, 3:] = quat_apply_inverse(quat_w, vel_w[:, 3:])
     asset.write_root_link_velocity_to_sim(vel_w, env_ids=env_ids)
 
@@ -279,7 +297,9 @@ class EventCfg:
         mode="startup",
         func=mdp.randomize_field,
         params={
-            "asset_cfg": SceneEntityCfg("robot", geom_names=[]),  # Override in robot cfg.
+            "asset_cfg": SceneEntityCfg(
+                "robot", geom_names=[]
+            ),  # Override in robot cfg.
             "operation": "abs",
             "field": "geom_friction",
             "ranges": (0.8, 1.2),
@@ -290,7 +310,10 @@ class EventCfg:
         func=push_by_setting_velocity,
         mode="interval",
         interval_range_s=(1.0, 3.0),
-        params={"velocity_range": {"x": (-0.3, 0.3), "y": (0.0, 0.0)}, "intensity": 0.0},
+        params={
+            "velocity_range": {"x": (-0.3, 0.3), "y": (0.0, 0.0)},
+            "intensity": 0.0,
+        },
     )
 
     # print_debug: EventTerm = term(
@@ -304,7 +327,9 @@ class EventCfg:
 @dataclass
 class TerminationCfg:
     time_out: DoneTerm = term(DoneTerm, func=mdp.time_out, time_out=True)
-    fell_over: DoneTerm = term(DoneTerm, func=mdp.bad_orientation, params={"limit_angle": math.radians(70.0)})
+    fell_over: DoneTerm = term(
+        DoneTerm, func=mdp.bad_orientation, params={"limit_angle": math.radians(70.0)}
+    )
     illegal_contact: DoneTerm | None = term(
         DoneTerm,
         func=mdp_vel.illegal_contact,
@@ -342,7 +367,9 @@ class CurriculumCfg:
     push_intensity: CurrTerm | None = term(
         CurrTerm,
         func=increase_push_intensity,
-        params={"intensities": [(5000 * 24, 1.0), (10000 * 24, 2.0), (15000 * 24, 3.0)]},
+        params={
+            "intensities": [(5000 * 24, 1.0), (12000 * 24, 2.0), (22000 * 24, 3.0)]
+        },
     )
     # terrain_levels: CurrTerm | None = term(
     #     CurrTerm, func=mdp_vel.terrain_levels_vel, params={"command_name": "twist"}
@@ -417,7 +444,9 @@ class UpkieVelocityEnvCfg(ManagerBasedRlEnvCfg):
 
 @dataclass
 class UpkieVelocityEnvWithPushCfg(UpkieVelocityEnvCfg):
-    curriculum: CurriculumCfg = field(default_factory=CurriculumCfg)  # Add curriculum to increase push intensity
+    curriculum: CurriculumCfg = field(
+        default_factory=CurriculumCfg
+    )  # Add curriculum to increase push intensity
 
     # def __post_init__(self):
     #     super().__post_init__()
@@ -430,6 +459,16 @@ class UpkieVelocityEnvWithPushCfg(UpkieVelocityEnvCfg):
 class UpkieVelocityEnvLegsBackwardCfg(UpkieVelocityEnvCfg):
     def __post_init__(self):
         super().__post_init__()
+
+        self.rewards.track_linear_velocity.weight = 0.0
+        self.rewards.track_angular_velocity.weight = 0.0
+
+        self.commands.twist.ranges = mdp_vel.UniformVelocityCommandCfg.Ranges(
+            lin_vel_x=(0.0, 0.0),
+            lin_vel_y=(0.0, 0.0),
+            ang_vel_z=(0.0, 0.0),
+            heading=(-math.pi, math.pi),
+        )
 
         # Reset robot in default pose (with legs backward)
         self.events.reset_base.params["pose_range"]["z"] = (0.48, 0.48)
@@ -444,7 +483,9 @@ class UpkieVelocityEnvLegsBackwardCfg(UpkieVelocityEnvCfg):
 
 @dataclass
 class UpkieVelocityEnvLegsBackwardWithPushCfg(UpkieVelocityEnvLegsBackwardCfg):
-    curriculum: CurriculumCfg = field(default_factory=CurriculumCfg)  # Add curriculum to increase push intensity
+    curriculum: CurriculumCfg = field(
+        default_factory=CurriculumCfg
+    )  # Add curriculum to increase push intensity
 
     # def __post_init__(self):
     #     super().__post_init__()
