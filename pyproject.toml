@@ -20,4 +20,4 @@ src = ["src"]  # Helpful for recognizing first-party imports.
 indent-width = 4
 
 [tool.uv.sources]
-mjlab = { git = "https://github.com/mujocolab/mjlab.git" }
+mjlab = { git = "https://github.com/mujocolab/mjlab.git", rev = "cb0d5d3" }
