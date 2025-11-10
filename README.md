@@ -9,7 +9,7 @@ I thanks the MjLab team for their great work on this framework, as well as Stép
 Currently a velocity control task is implemented, allowing the robot to follow given target linear and angular velocities, while being able to resist external disturbances (see video on the right).
 Two other tasks are planned: the same velocity control task but with legs bent backward, and a standup task. 
 
-I'm currently building my own version of the robot. The CAD  files are available [here](https://cad.onshape.com/documents/626c0feba56391e940274c5a/v/e55f6b42bf6a32302009cdcb/e/f40baedc39efd40637593503?renderMode=0&uiState=6911acf412b18eb69d61bfb1). The robot model currently used for simulation is quite simplified, I plan to use this CAD model to create a more accurate model in the future.
+I'm currently building my own version of the robot. The CAD  files are available [here](https://cad.onshape.com/documents/626c0feba56391e940274c5a/v/e55f6b42bf6a32302009cdcb/e/f40baedc39efd40637593503?renderMode=0&uiState=6911b15212b18eb69d61e2a6). The robot model currently used for simulation is quite simplified, I plan to use this CAD model to create a more accurate model in the future.
 
 ## Install
 
