@@ -59,7 +59,7 @@ gym.register(
     entry_point="mjlab.envs:ManagerBasedRlEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": f"{__name__}.upkie_velocity_env_cfg:UpkieVelocityEnvCfg_PLAY",
+        "env_cfg_entry_point": f"{__name__}.upkie_velocity_env_cfg:UpkieVelocityEnvLegsBackwardCfg_PLAY",
         "rl_cfg_entry_point": f"{__name__}.upkie_velocity_env_cfg:UpkieCfg",
     },
 )

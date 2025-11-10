@@ -240,10 +240,12 @@ def reset_legs_backward(
     env_ids: torch.Tensor,
 ) -> None:
     """Reset robot joints with legs backward"""
-    env.sim.data.qpos[:, 7 + LEFT_HIP] = POS_CTRL_JOINTS_DEFAULT["left_hip"]
-    env.sim.data.qpos[:, 7 + LEFT_KNEE] = POS_CTRL_JOINTS_DEFAULT["left_knee"]
-    env.sim.data.qpos[:, 7 + RIGHT_HIP] = POS_CTRL_JOINTS_DEFAULT["right_hip"]
-    env.sim.data.qpos[:, 7 + RIGHT_KNEE] = POS_CTRL_JOINTS_DEFAULT["right_knee"]
+    env.sim.data.qpos[env_ids, 7 + LEFT_HIP] = POS_CTRL_JOINTS_DEFAULT["left_hip"]
+    env.sim.data.qpos[env_ids, 7 + LEFT_KNEE] = POS_CTRL_JOINTS_DEFAULT["left_knee"]
+    env.sim.data.qpos[env_ids, 7 + RIGHT_HIP] = POS_CTRL_JOINTS_DEFAULT["right_hip"]
+    env.sim.data.qpos[env_ids, 7 + RIGHT_KNEE] = POS_CTRL_JOINTS_DEFAULT["right_knee"]
+
+    env.sim.data.qvel[env_ids, :] = 0.0
 
 
 def push_by_setting_velocity(
@@ -368,9 +370,25 @@ class CurriculumCfg:
         CurrTerm,
         func=increase_push_intensity,
         params={
-            "intensities": [(5000 * 24, 1.0), (12000 * 24, 2.0), (22000 * 24, 3.0)]
+            "intensities": [(8000 * 24, 1.0), (16000 * 24, 2.0)],
         },
     )
+    # linear_reward_weights: CurrTerm | None = term(
+    #     CurrTerm,
+    #     func=mdp_vel.reward_weight,
+    #     params={
+    #         "reward_name": "track_linear_velocity",
+    #         "weight_stages": [{"step": 0, "weight": 0.0}, {"step": 1000 * 24, "weight": 2.0}],
+    #     },
+    # )
+    # angular_reward_weights: CurrTerm | None = term(
+    #     CurrTerm,
+    #     func=mdp_vel.reward_weight,
+    #     params={
+    #         "reward_name": "track_angular_velocity",
+    #         "weight_stages": [{"step": 0, "weight": 0.0}, {"step": 1000 * 24, "weight": 2.5}],
+    #     },
+    # )
     # terrain_levels: CurrTerm | None = term(
     #     CurrTerm, func=mdp_vel.terrain_levels_vel, params={"command_name": "twist"}
     # )
@@ -460,15 +478,15 @@ class UpkieVelocityEnvLegsBackwardCfg(UpkieVelocityEnvCfg):
     def __post_init__(self):
         super().__post_init__()
 
-        self.rewards.track_linear_velocity.weight = 0.0
-        self.rewards.track_angular_velocity.weight = 0.0
+        self.rewards.track_linear_velocity.weight = 2.5
+        self.rewards.track_angular_velocity.weight = 2.0
 
-        self.commands.twist.ranges = mdp_vel.UniformVelocityCommandCfg.Ranges(
-            lin_vel_x=(0.0, 0.0),
-            lin_vel_y=(0.0, 0.0),
-            ang_vel_z=(0.0, 0.0),
-            heading=(-math.pi, math.pi),
-        )
+        # self.commands.twist.ranges = mdp_vel.UniformVelocityCommandCfg.Ranges(
+        #     lin_vel_x=(0.0, 0.0),
+        #     lin_vel_y=(0.0, 0.0),
+        #     ang_vel_z=(0.0, 0.0),
+        #     heading=(-math.pi, math.pi),
+        # )
 
         # Reset robot in default pose (with legs backward)
         self.events.reset_base.params["pose_range"]["z"] = (0.48, 0.48)
