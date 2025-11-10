@@ -117,9 +117,9 @@ class CommandsCfg:
         heading_control_stiffness=0.5,
         debug_vis=True,
         ranges=mdp_vel.UniformVelocityCommandCfg.Ranges(
-            lin_vel_x=(-1.0, 1.0),
+            lin_vel_x=(0.0, 0.0),
             lin_vel_y=(0.0, 0.0),
-            ang_vel_z=(-0.5, 0.5),
+            ang_vel_z=(0.0, 0.0),
             heading=(-math.pi, math.pi),
         ),
     )
@@ -212,7 +212,7 @@ class RewardCfg:
     track_angular_velocity: RewardTerm = term(
         RewardTerm,
         func=mdp_vel.track_angular_velocity,
-        weight=2.5,
+        weight=2.0,
         params={"command_name": "twist", "std": math.sqrt(0.1)},
     )
     upright: RewardTerm = term(
@@ -349,28 +349,25 @@ def increase_push_intensity(
         if env.common_step_counter >= step_threshold:
             push_event_cfg.params["intensity"] = intensity
 
-    # # Get first environment's rewards
-    # mean_reward = 0.0
-    # for env_id in env_ids:
-    #     first_reward_term = env.reward_manager.get_active_iterable_terms(env_id)
-    #     reward_sum = 0.0
-    #     for name, values in first_reward_term:
-    #         reward_sum += values[0]
-    #     mean_reward += reward_sum/len(env_ids)
-    # # print(f"Curriculum: reward sum = {mean_reward}")
-
-    # # Set push intensity based on reward sum
-    # if mean_reward > intensities[0][0]:
-    #     push_event_cfg.params["intensity"] = intensities[0][1]
-
-
 @dataclass
 class CurriculumCfg:
+    command_vel: CurrTerm | None = term(
+        CurrTerm,
+        func=mdp_vel.commands_vel,
+        params={
+        "command_name": "twist",
+        "velocity_stages": [
+            {"step": 0, "lin_vel_x": (-0.5, 0.5), "ang_vel_z": (-0.5, 0.5)},
+            {"step": 5000 * 24, "lin_vel_x": (-1.0, 1.0), "ang_vel_z": (-1.0, 1.0)},
+            {"step": 10000 * 24, "lin_vel_x": (-2.0, 2.0), "ang_vel_z": (-1.5, 1.5)},
+        ],
+        },
+    )
     push_intensity: CurrTerm | None = term(
         CurrTerm,
         func=increase_push_intensity,
         params={
-            "intensities": [(8000 * 24, 1.0), (16000 * 24, 2.0)],
+            "intensities": [],  # Override in cfg
         },
     )
     # linear_reward_weights: CurrTerm | None = term(
@@ -392,18 +389,6 @@ class CurriculumCfg:
     # terrain_levels: CurrTerm | None = term(
     #     CurrTerm, func=mdp_vel.terrain_levels_vel, params={"command_name": "twist"}
     # )
-    # command_vel: CurrTerm | None = term(
-    #     CurrTerm,
-    #     func=mdp_vel.commands_vel,
-    #     params={
-    #     "command_name": "twist",
-    #     "velocity_stages": [
-    #         {"step": 0, "lin_vel_x": (-1.0, 1.0), "ang_vel_z": (-0.5, 0.5)},
-    #         {"step": 5000 * 24, "lin_vel_x": (-1.5, 2.0), "ang_vel_z": (-0.7, 0.7)},
-    #         {"step": 10000 * 24, "lin_vel_x": (-2.0, 3.0)},
-    #     ],
-    #     },
-    # )
 
 
 @dataclass
@@ -417,6 +402,7 @@ class UpkieVelocityEnvCfg(ManagerBasedRlEnvCfg):
     rewards: RewardCfg = field(default_factory=RewardCfg)
     events: EventCfg = field(default_factory=EventCfg)
     terminations: TerminationCfg = field(default_factory=TerminationCfg)
+    curriculum: CurriculumCfg = field(default_factory=CurriculumCfg)
     decimation: int = 4
     episode_length_s: float = 20.0
 
@@ -462,15 +448,11 @@ class UpkieVelocityEnvCfg(ManagerBasedRlEnvCfg):
 
 @dataclass
 class UpkieVelocityEnvWithPushCfg(UpkieVelocityEnvCfg):
-    curriculum: CurriculumCfg = field(
-        default_factory=CurriculumCfg
-    )  # Add curriculum to increase push intensity
+    def __post_init__(self):
+        super().__post_init__()
 
-    # def __post_init__(self):
-    #     super().__post_init__()
-
-    #     # Enable pushes
-    #     self.events.push_robot.params["intensity"] = 1.0
+        # Enable pushes XXX: to tune depending of the result of the velocity curriculum
+        self.curriculum.push_intensity.params["intensities"] = [(10000 * 24, 1.0), (18000 * 24, 2.0)]
 
 
 @dataclass
@@ -478,15 +460,9 @@ class UpkieVelocityEnvLegsBackwardCfg(UpkieVelocityEnvCfg):
     def __post_init__(self):
         super().__post_init__()
 
+        # Set tracking reward weights
         self.rewards.track_linear_velocity.weight = 2.5
         self.rewards.track_angular_velocity.weight = 2.0
-
-        # self.commands.twist.ranges = mdp_vel.UniformVelocityCommandCfg.Ranges(
-        #     lin_vel_x=(0.0, 0.0),
-        #     lin_vel_y=(0.0, 0.0),
-        #     ang_vel_z=(0.0, 0.0),
-        #     heading=(-math.pi, math.pi),
-        # )
 
         # Reset robot in default pose (with legs backward)
         self.events.reset_base.params["pose_range"]["z"] = (0.48, 0.48)
@@ -501,15 +477,11 @@ class UpkieVelocityEnvLegsBackwardCfg(UpkieVelocityEnvCfg):
 
 @dataclass
 class UpkieVelocityEnvLegsBackwardWithPushCfg(UpkieVelocityEnvLegsBackwardCfg):
-    curriculum: CurriculumCfg = field(
-        default_factory=CurriculumCfg
-    )  # Add curriculum to increase push intensity
+    def __post_init__(self):
+        super().__post_init__()
 
-    # def __post_init__(self):
-    #     super().__post_init__()
-
-    #     # Enable pushes
-    #     self.events.push_robot.params["intensity"] = 1.0
+        # Enable pushes XXX: to tune depending of the result of the velocity curriculum
+        self.curriculum.push_intensity.params["intensities"] = [(10000 * 24, 1.0), (18000 * 24, 2.0)]
 
 
 @dataclass
@@ -554,4 +526,4 @@ class UpkieCfg(RslRlOnPolicyRunnerCfg):
     experiment_name: str = "upkie_velocity"
     save_interval: int = 250
     num_steps_per_env: int = 24
-    max_iterations: int = 30_000
+    max_iterations: int = 40_000
