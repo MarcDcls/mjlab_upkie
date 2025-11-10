@@ -30,33 +30,32 @@ To play with the velocity control agent with straight legs, use the following co
 uv run play Mjlab-Velocity-Upkie-Play --checkpoint-file logs/rsl_rl/upkie_velocity/bests/default.pt
 ```
 
-To push the robot while playing, you can double click on the trunk of the robot in the simulation window. Then, while holding the left-ctrl key, right-click and drag to apply a force to the robot.
+To push the robot while playing, you can double click on the trunk of the robot in the simulation window. 
+Then, while holding the left-ctrl key, right-click and drag to apply a force to the robot.
 
+This agent aims to have straight legs, which tends to result in having alternated legs as it seems more effective for rejection of disturbances.
 To play with the velocity control agent with backward bent legs, use the following command:
 
 ```
 uv run play Mjlab-Velocity-Upkie-Legs-Backward-Play --checkpoint-file logs/rsl_rl/upkie_velocity/bests/legs_backward.pt
 ```
 
-This agent is expected to resist external pressures a bit less effectively, but hey, style matters! :sunglasses:.
+This agent is expected to resist external pushes a bit less effectively, but hey, style matters! :sunglasses:.
 
 ## Training your own agent
 
-You can modify the environments and train agents. 
+You can modify the environments and train agents. To do so, modify the environment configurations in `src/mjlab_upkie/tasks/upkie_velocity_env_cfg.py`.
 
-To train an agent for the Upkie velocity control task, use the following command:
+To train an agent for the default Upkie velocity control task or the backward knee Upkie velocity control task, 
+you can use the following commands:
 
 ```
 uv run train Mjlab-Velocity-Upkie --env.scene.num-envs 2048
-```
-
-This command will start the training process using 2048 parallel environments. The pose regulation reward encourages the robot to maintain straight legs, whish can results in having alternated legs, which seems more effective for rejection of disturbances.
-
-To have an agent that tends to walk with backward knees, you can use the following command:
-
-```
 uv run train Mjlab-Velocity-Upkie-Legs-Backward --env.scene.num-envs 2048
 ```
+
+These commands will start the training process using 2048 parallel environments. The pose regulation reward encourages the robot to maintain straight or 
+bent backward legs, depending of which command you use. 
 
 ## Playing with your agents
 
@@ -64,15 +63,17 @@ To play with a trained agent for the Upkie velocity control task, use the follow
 
 ```
 uv run play Mjlab-Velocity-Upkie-Play --checkpoint-file [path to your checkpoint]
+uv run play Mjlab-Velocity-Upkie-Legs-Backward-Play --checkpoint-file [path to your checkpoint]
 ```
 
 Here, [path to your checkpoint] should be replaced with the actual path to the checkpoint file, which is typically located at `logs/rsl_rl/upkie_velocity/[date]/model_[number].pt`.
 
 
-## Personnal notes
+## Debug
 
 To debug an environment:
 
 ```
 uv run play Mjlab-Velocity-Upkie --agent zero
+uv run play Mjlab-Velocity-Upkie --agent random
 ```
