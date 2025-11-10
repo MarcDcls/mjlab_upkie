@@ -93,6 +93,14 @@ UPKIE_ACTION_SCALE: dict[str, float] = {
     "right_wheel": 1.0,
 }
 
+# Target backward legs position
+BACKWARD_LEGS_POS: dict[str, float] = {
+    "left_hip": 0.3,
+    "left_knee": -0.6,
+    "right_hip": -0.3,
+    "right_knee": 0.6,
+}
+
 
 @dataclass
 class ActionCfg:
@@ -174,14 +182,6 @@ def straight_legs(
     return torch.exp(-error / std**2)
 
 
-POS_CTRL_JOINTS_DEFAULT: dict[str, float] = {
-    "left_hip": 0.75,
-    "left_knee": -1.4,
-    "right_hip": -0.75,
-    "right_knee": 1.4,
-}
-
-
 def backward_legs(
     env: ManagerBasedRlEnv,
     std: float,
@@ -190,10 +190,10 @@ def backward_legs(
     joints_pos = env.sim.data.qpos[:, POSITION_JOINTS + 7]
     target_pos = torch.tensor(
         [
-            POS_CTRL_JOINTS_DEFAULT["left_hip"],
-            POS_CTRL_JOINTS_DEFAULT["left_knee"],
-            POS_CTRL_JOINTS_DEFAULT["right_hip"],
-            POS_CTRL_JOINTS_DEFAULT["right_knee"],
+            BACKWARD_LEGS_POS["left_hip"],
+            BACKWARD_LEGS_POS["left_knee"],
+            BACKWARD_LEGS_POS["right_hip"],
+            BACKWARD_LEGS_POS["right_knee"],
         ],
         device=env.device,
     )
@@ -240,10 +240,10 @@ def reset_legs_backward(
     env_ids: torch.Tensor,
 ) -> None:
     """Reset robot joints with legs backward"""
-    env.sim.data.qpos[env_ids, 7 + LEFT_HIP] = POS_CTRL_JOINTS_DEFAULT["left_hip"]
-    env.sim.data.qpos[env_ids, 7 + LEFT_KNEE] = POS_CTRL_JOINTS_DEFAULT["left_knee"]
-    env.sim.data.qpos[env_ids, 7 + RIGHT_HIP] = POS_CTRL_JOINTS_DEFAULT["right_hip"]
-    env.sim.data.qpos[env_ids, 7 + RIGHT_KNEE] = POS_CTRL_JOINTS_DEFAULT["right_knee"]
+    env.sim.data.qpos[env_ids, 7 + LEFT_HIP] = BACKWARD_LEGS_POS["left_hip"]
+    env.sim.data.qpos[env_ids, 7 + LEFT_KNEE] = BACKWARD_LEGS_POS["left_knee"]
+    env.sim.data.qpos[env_ids, 7 + RIGHT_HIP] = BACKWARD_LEGS_POS["right_hip"]
+    env.sim.data.qpos[env_ids, 7 + RIGHT_KNEE] = BACKWARD_LEGS_POS["right_knee"]
 
     env.sim.data.qvel[env_ids, :] = 0.0
 
@@ -317,7 +317,6 @@ class EventCfg:
             "intensity": 0.0,
         },
     )
-
     # print_debug: EventTerm = term(
     #     EventTerm,
     #     func= lambda env, env_ids: print(f"{env.sim.data.qpos[:, :3]}"),
@@ -349,18 +348,15 @@ def increase_push_intensity(
         if env.common_step_counter >= step_threshold:
             push_event_cfg.params["intensity"] = intensity
 
+
 @dataclass
 class CurriculumCfg:
     command_vel: CurrTerm | None = term(
         CurrTerm,
         func=mdp_vel.commands_vel,
         params={
-        "command_name": "twist",
-        "velocity_stages": [
-            {"step": 0, "lin_vel_x": (-0.5, 0.5), "ang_vel_z": (-0.5, 0.5)},
-            {"step": 5000 * 24, "lin_vel_x": (-1.0, 1.0), "ang_vel_z": (-1.0, 1.0)},
-            {"step": 10000 * 24, "lin_vel_x": (-2.0, 2.0), "ang_vel_z": (-1.5, 1.5)},
-        ],
+            "command_name": "twist",
+            "velocity_stages": [],  # Override in cfg
         },
     )
     push_intensity: CurrTerm | None = term(
@@ -407,18 +403,20 @@ class UpkieVelocityEnvCfg(ManagerBasedRlEnvCfg):
     episode_length_s: float = 20.0
 
     def __post_init__(self):
-        self.events.reset_base.params["pose_range"]["z"] = (0.56, 0.56)
-
         self.scene.entities = {"robot": UPKIE_CFG}
+        self.actions.joint_pos.scale = 0.75
+        self.viewer.body_name = "trunk"
+        self.commands.twist.viz.z_offset = 0.75
+        self.sim.nconmax = 256
+        self.sim.njmax = 512
 
+        # Add non-foot ground contact sensor
         nonfoot_ground_cfg = ContactSensorCfg(
             name="nonfoot_ground_touch",
             primary=ContactMatch(
                 mode="geom",
                 entity="robot",
-                # Grab all collision geoms
                 pattern=r".*_collision\d*$",
-                # Except for the foot geoms.
                 exclude=tuple(["left_foot_collision", "right_foot_collision"]),
             ),
             secondary=ContactMatch(mode="body", pattern="terrain"),
@@ -428,22 +426,26 @@ class UpkieVelocityEnvCfg(ManagerBasedRlEnvCfg):
         )
         self.scene.sensors = (nonfoot_ground_cfg,)
 
+        # Set correct geom names for foot friction randomization
         self.events.foot_friction.params["asset_cfg"].geom_names = [
             "left_foot_collision",
             "right_foot_collision",
         ]
 
-        self.actions.joint_pos.scale = 0.75
-
-        self.viewer.body_name = "trunk"
-        self.commands.twist.viz.z_offset = 0.75
-
         # Flat terrain
         self.scene.terrain.terrain_type = "plane"
         self.scene.terrain.terrain_generator = None
 
-        self.sim.nconmax = 256
-        self.sim.njmax = 512
+        # Reset height
+        self.events.reset_base.params["pose_range"]["z"] = (0.56, 0.56)
+
+        # Set curriculum velocity stages
+        self.curriculum.command_vel.params["velocity_stages"] = [
+            {"step": 0, "lin_vel_x": (-0.5, 0.5), "ang_vel_z": (-0.5, 0.5)},
+            {"step": 10000 * 24, "lin_vel_x": (-1.0, 1.0), "ang_vel_z": (-1.0, 1.0)},
+            {"step": 25000 * 24, "lin_vel_x": (-1.5, 1.5), "ang_vel_z": (-1.5, 1.5)},
+            {"step": 50000 * 24, "lin_vel_x": (-2.0, 2.0), "ang_vel_z": (-1.5, 1.5)},
+        ]
 
 
 @dataclass
@@ -452,7 +454,10 @@ class UpkieVelocityEnvWithPushCfg(UpkieVelocityEnvCfg):
         super().__post_init__()
 
         # Enable pushes XXX: to tune depending of the result of the velocity curriculum
-        self.curriculum.push_intensity.params["intensities"] = [(10000 * 24, 1.0), (18000 * 24, 2.0)]
+        self.curriculum.push_intensity.params["intensities"] = [
+            (10000 * 24, 1.0),
+            (18000 * 24, 2.0),
+        ]
 
 
 @dataclass
@@ -465,7 +470,7 @@ class UpkieVelocityEnvLegsBackwardCfg(UpkieVelocityEnvCfg):
         self.rewards.track_angular_velocity.weight = 2.0
 
         # Reset robot in default pose (with legs backward)
-        self.events.reset_base.params["pose_range"]["z"] = (0.48, 0.48)
+        self.events.reset_base.params["pose_range"]["z"] = (0.545, 0.545)
         self.events.reset_robot_joints.func = reset_legs_backward
         self.events.reset_robot_joints.params = {}
 
@@ -481,7 +486,10 @@ class UpkieVelocityEnvLegsBackwardWithPushCfg(UpkieVelocityEnvLegsBackwardCfg):
         super().__post_init__()
 
         # Enable pushes XXX: to tune depending of the result of the velocity curriculum
-        self.curriculum.push_intensity.params["intensities"] = [(10000 * 24, 1.0), (18000 * 24, 2.0)]
+        self.curriculum.push_intensity.params["intensities"] = [
+            (10000 * 24, 1.0),
+            (18000 * 24, 2.0),
+        ]
 
 
 @dataclass
@@ -524,6 +532,6 @@ class UpkieCfg(RslRlOnPolicyRunnerCfg):
     )
     wandb_project: str = "mjlab_upkie"
     experiment_name: str = "upkie_velocity"
-    save_interval: int = 250
+    save_interval: int = 999
     num_steps_per_env: int = 24
-    max_iterations: int = 40_000
+    max_iterations: int = 80_000
