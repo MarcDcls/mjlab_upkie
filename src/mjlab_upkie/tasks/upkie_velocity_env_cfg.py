@@ -83,16 +83,6 @@ RIGHT_WHEEL = 5
 POSITION_JOINTS = np.array([LEFT_HIP, LEFT_KNEE, RIGHT_HIP, RIGHT_KNEE])
 VELOCITY_JOINTS = np.array([LEFT_WHEEL, RIGHT_WHEEL])
 
-# Having different action scales for the wheels and legs seems to have no effect
-UPKIE_ACTION_SCALE: dict[str, float] = {
-    "left_hip": 1.0,
-    "left_knee": 1.0,
-    "right_hip": 1.0,
-    "right_knee": 1.0,
-    "left_wheel": 1.0,
-    "right_wheel": 1.0,
-}
-
 # Target backward legs position
 BACKWARD_LEGS_POS: dict[str, float] = {
     "left_hip": 0.3,
@@ -101,6 +91,10 @@ BACKWARD_LEGS_POS: dict[str, float] = {
     "right_knee": 0.6,
 }
 
+# Robot height when standing upright
+DEFAULT_ROBOT_HEIGHT = 0.56
+BACKWARD_LEG_ROBOT_HEIGHT = 0.545
+
 
 @dataclass
 class ActionCfg:
@@ -108,7 +102,7 @@ class ActionCfg:
         mdp.JointPositionActionCfg,
         asset_name="robot",
         actuator_names=[".*"],
-        scale=UPKIE_ACTION_SCALE,
+        scale=0.75,
         use_default_offset=False,
     )
 
@@ -437,11 +431,15 @@ class UpkieVelocityEnvCfg(ManagerBasedRlEnvCfg):
         self.scene.terrain.terrain_generator = None
 
         # Reset height
-        self.events.reset_base.params["pose_range"]["z"] = (0.56, 0.56)
+        self.events.reset_base.params["pose_range"]["z"] = (
+            DEFAULT_ROBOT_HEIGHT,
+            DEFAULT_ROBOT_HEIGHT,
+        )
 
         # Set tracking reward weights
         self.rewards.track_linear_velocity.weight = 2.0
         self.rewards.track_angular_velocity.weight = 2.5
+        self.rewards.pose.weight = 0.2
 
         # Set curriculum velocity stages
         self.curriculum.command_vel.params["velocity_stages"] = [
@@ -461,12 +459,13 @@ class UpkieVelocityEnvWithPushCfg(UpkieVelocityEnvCfg):
 
         # Setting push event parameters
         self.events.push_robot.params["velocity_range"] = {
-            "x": (-0.3, 0.3),
-            "y": (0.0, 0.0),
+            "x": (-0.5, 0.5),
+            "y": (-0.5, 0.5),
         }
         self.curriculum.push_intensity.params["intensities"] = [
-            (20001 * 24, 1.0),
-            (30001 * 24, 2.0),
+            (30001 * 24, 1.0),
+            (50001 * 24, 2.0),
+            (80001 * 24, 3.0),
         ]
 
 
@@ -504,7 +503,10 @@ class UpkieVelocityEnvLegsBackwardCfg(UpkieVelocityEnvCfg):
         self.rewards.track_angular_velocity.weight = 2.0
 
         # Reset robot in default pose (with legs backward)
-        self.events.reset_base.params["pose_range"]["z"] = (0.545, 0.545)
+        self.events.reset_base.params["pose_range"]["z"] = (
+            BACKWARD_LEG_ROBOT_HEIGHT,
+            BACKWARD_LEG_ROBOT_HEIGHT,
+        )
         self.events.reset_robot_joints.func = reset_legs_backward
         self.events.reset_robot_joints.params = {}
 
@@ -557,6 +559,18 @@ class UpkieVelocityEnvLegsBackwardCfg_PLAY(UpkieVelocityEnvLegsBackwardCfg):
 
 
 @dataclass
+class UpkieVelocityEnvStaticPushCfg_PLAY(UpkieVelocityEnvStaticPushCfg):
+    episode_length_s: float = 1e9  # Very long episodes for PLAY mode
+
+    def __post_init__(self):
+        super().__post_init__()
+
+        # Set only one push intensity for PLAY mode
+        self.curriculum.push_intensity.params["intensities"] = []
+        self.events.push_robot.params["intensity"] = 3.0
+
+
+@dataclass
 class UpkieCfg(RslRlOnPolicyRunnerCfg):
     policy: RslRlPpoActorCriticCfg = field(
         default_factory=lambda: RslRlPpoActorCriticCfg(
@@ -586,6 +600,6 @@ class UpkieCfg(RslRlOnPolicyRunnerCfg):
     )
     wandb_project: str = "mjlab_upkie"
     experiment_name: str = "upkie_velocity"
-    save_interval: int = 1000
+    save_interval: int = 10000
     num_steps_per_env: int = 24
-    max_iterations: int = 60_000
+    max_iterations: int = 150_000

@@ -34,6 +34,17 @@ gym.register(
 
 
 gym.register(
+    id="Mjlab-Velocity-Upkie-Static-Push-Play",
+    entry_point="mjlab.envs:ManagerBasedRlEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": f"{__name__}.upkie_velocity_env_cfg:UpkieVelocityEnvStaticPushCfg_PLAY",
+        "rl_cfg_entry_point": f"{__name__}.upkie_velocity_env_cfg:UpkieCfg",
+    },
+)
+
+
+gym.register(
     id="Mjlab-Velocity-Upkie-Legs-Backward",
     entry_point="mjlab.envs:ManagerBasedRlEnv",
     disable_env_checker=True,
