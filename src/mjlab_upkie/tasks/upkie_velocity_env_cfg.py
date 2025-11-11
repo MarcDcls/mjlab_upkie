@@ -471,6 +471,30 @@ class UpkieVelocityEnvWithPushCfg(UpkieVelocityEnvCfg):
 
 
 @dataclass
+class UpkieVelocityEnvStaticPushCfg(UpkieVelocityEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+
+        # No movement
+        self.commands.twist.ranges.lin_vel_x = (0.0, 0.0)
+        self.commands.twist.ranges.ang_vel_z = (0.0, 0.0)
+        self.curriculum.command_vel.params["velocity_stages"] = []
+        self.rewards.track_linear_velocity.weight = 0.0
+        self.rewards.track_angular_velocity.weight = 0.0
+
+        # Setting push event parameters
+        self.events.push_robot.params["velocity_range"] = {
+            "x": (-0.5, 0.5),
+            "y": (-0.3, 0.3),
+        }
+        self.curriculum.push_intensity.params["intensities"] = [
+            (5001 * 24, 1.0),
+            (15001 * 24, 2.0),
+            (35001 * 24, 3.0),
+        ]
+
+
+@dataclass
 class UpkieVelocityEnvLegsBackwardCfg(UpkieVelocityEnvCfg):
     def __post_init__(self):
         super().__post_init__()
@@ -564,4 +588,4 @@ class UpkieCfg(RslRlOnPolicyRunnerCfg):
     experiment_name: str = "upkie_velocity"
     save_interval: int = 1000
     num_steps_per_env: int = 24
-    max_iterations: int = 40_000
+    max_iterations: int = 60_000
