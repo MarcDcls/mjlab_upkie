@@ -439,13 +439,16 @@ class UpkieVelocityEnvCfg(ManagerBasedRlEnvCfg):
         # Reset height
         self.events.reset_base.params["pose_range"]["z"] = (0.56, 0.56)
 
-        # Set curriculum velocity stages
-        self.curriculum.command_vel.params["velocity_stages"] = [
-            {"step": 0, "lin_vel_x": (-0.5, 0.5), "ang_vel_z": (-0.5, 0.5)},
-            {"step": 10000 * 24, "lin_vel_x": (-1.0, 1.0), "ang_vel_z": (-1.0, 1.0)},
-            {"step": 25000 * 24, "lin_vel_x": (-1.5, 1.5), "ang_vel_z": (-1.5, 1.5)},
-            {"step": 50000 * 24, "lin_vel_x": (-2.0, 2.0), "ang_vel_z": (-1.5, 1.5)},
-        ]
+        # # Set curriculum velocity stages
+        # self.curriculum.command_vel.params["velocity_stages"] = [
+        #     {"step": 0, "lin_vel_x": (-0.5, 0.5), "ang_vel_z": (-0.5, 0.5)},
+        #     {"step": 10000 * 24, "lin_vel_x": (-1.0, 1.0), "ang_vel_z": (-1.0, 1.0)},
+        #     {"step": 25000 * 24, "lin_vel_x": (-1.5, 1.5), "ang_vel_z": (-1.5, 1.5)},
+        #     {"step": 50000 * 24, "lin_vel_x": (-2.0, 2.0), "ang_vel_z": (-1.5, 1.5)},
+        # ]
+
+        self.commands.twist.ranges.lin_vel_x = (-1.0, 1.0)
+        self.commands.twist.ranges.ang_vel_z = (-1.5, 1.5)
 
 
 @dataclass
@@ -496,10 +499,26 @@ class UpkieVelocityEnvLegsBackwardWithPushCfg(UpkieVelocityEnvLegsBackwardCfg):
 class UpkieVelocityEnvCfg_PLAY(UpkieVelocityEnvCfg):
     episode_length_s: float = 1e9  # Very long episodes for PLAY mode
 
+    def __post_init__(self):
+        super().__post_init__()
+
+        # Set only one velocity stage for PLAY mode
+        self.curriculum.command_vel.params["velocity_stages"] = []
+        self.commands.twist.ranges.lin_vel_x = (-1, 1)
+        self.commands.twist.ranges.ang_vel_z = (-1.5, 1.5)
+
 
 @dataclass
 class UpkieVelocityEnvLegsBackwardCfg_PLAY(UpkieVelocityEnvLegsBackwardCfg):
     episode_length_s: float = 1e9  # Very long episodes for PLAY mode
+
+    def __post_init__(self):
+        super().__post_init__()
+
+        # Set only one velocity stage for PLAY mode
+        self.curriculum.command_vel.params["velocity_stages"] = []
+        self.commands.twist.ranges.lin_vel_x = (-1, 1)
+        self.commands.twist.ranges.ang_vel_z = (-1.5, 1.5)
 
 
 @dataclass
