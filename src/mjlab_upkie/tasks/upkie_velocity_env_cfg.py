@@ -206,13 +206,13 @@ class RewardCfg:
     track_linear_velocity: RewardTerm = term(
         RewardTerm,
         func=mdp_vel.track_linear_velocity,
-        weight=2.0,
+        weight=2.0,  # Overridden in env cfg
         params={"command_name": "twist", "std": math.sqrt(0.1)},
     )
     track_angular_velocity: RewardTerm = term(
         RewardTerm,
         func=mdp_vel.track_angular_velocity,
-        weight=2.0,
+        weight=2.0,  # Overridden in env cfg
         params={"command_name": "twist", "std": math.sqrt(0.1)},
     )
     upright: RewardTerm = term(
@@ -313,7 +313,7 @@ class EventCfg:
         mode="interval",
         interval_range_s=(1.0, 3.0),
         params={
-            "velocity_range": {"x": (-0.3, 0.3), "y": (0.0, 0.0)},
+            "velocity_range": {"x": (-0.0, 0.0), "y": (0.0, 0.0)},  # Overridden in cfg
             "intensity": 0.0,
         },
     )
@@ -439,13 +439,16 @@ class UpkieVelocityEnvCfg(ManagerBasedRlEnvCfg):
         # Reset height
         self.events.reset_base.params["pose_range"]["z"] = (0.56, 0.56)
 
-        # # Set curriculum velocity stages
-        # self.curriculum.command_vel.params["velocity_stages"] = [
-        #     {"step": 0, "lin_vel_x": (-0.5, 0.5), "ang_vel_z": (-0.5, 0.5)},
-        #     {"step": 10000 * 24, "lin_vel_x": (-1.0, 1.0), "ang_vel_z": (-1.0, 1.0)},
-        #     {"step": 25000 * 24, "lin_vel_x": (-1.5, 1.5), "ang_vel_z": (-1.5, 1.5)},
-        #     {"step": 50000 * 24, "lin_vel_x": (-2.0, 2.0), "ang_vel_z": (-1.5, 1.5)},
-        # ]
+        # Set tracking reward weights
+        self.rewards.track_linear_velocity.weight = 2.0
+        self.rewards.track_angular_velocity.weight = 2.5
+
+        # Set curriculum velocity stages
+        self.curriculum.command_vel.params["velocity_stages"] = [
+            {"step": 0, "lin_vel_x": (-0.5, 0.5), "ang_vel_z": (-0.5, 0.5)},
+            {"step": 6001 * 24, "lin_vel_x": (-0.75, 0.75), "ang_vel_z": (-1.0, 1.0)},
+            {"step": 12001 * 24, "lin_vel_x": (-1.0, 1.0), "ang_vel_z": (-1.5, 1.5)},
+        ]
 
         self.commands.twist.ranges.lin_vel_x = (-1.0, 1.0)
         self.commands.twist.ranges.ang_vel_z = (-1.5, 1.5)
@@ -456,10 +459,14 @@ class UpkieVelocityEnvWithPushCfg(UpkieVelocityEnvCfg):
     def __post_init__(self):
         super().__post_init__()
 
-        # Enable pushes XXX: to tune depending of the result of the velocity curriculum
-        self.curriculum.push_intensity.params["intensities"] = [
-            (10000 * 24, 1.0),
-            (18000 * 24, 2.0),
+        # Setting push event parameters
+        self.events.push_robot.params["velocity_range"] = {
+            "x": (-0.3, 0.3),
+            "y": (0.0, 0.0),
+        }
+        self.curriculum.push_intensity["intensities"] = [
+            (20001 * 24, 1.0),
+            (30001 * 24, 2.0),
         ]
 
 
@@ -488,10 +495,14 @@ class UpkieVelocityEnvLegsBackwardWithPushCfg(UpkieVelocityEnvLegsBackwardCfg):
     def __post_init__(self):
         super().__post_init__()
 
-        # Enable pushes XXX: to tune depending of the result of the velocity curriculum
-        self.curriculum.push_intensity.params["intensities"] = [
-            (10000 * 24, 1.0),
-            (18000 * 24, 2.0),
+        # Setting push event parameters
+        self.events.push_robot.params["velocity_range"] = {
+            "x": (-0.3, 0.3),
+            "y": (0.0, 0.0),
+        }
+        self.curriculum.push_intensity["intensities"] = [
+            (20001 * 24, 1.0),
+            (30001 * 24, 2.0),
         ]
 
 
@@ -551,6 +562,6 @@ class UpkieCfg(RslRlOnPolicyRunnerCfg):
     )
     wandb_project: str = "mjlab_upkie"
     experiment_name: str = "upkie_velocity"
-    save_interval: int = 999
+    save_interval: int = 1000
     num_steps_per_env: int = 24
-    max_iterations: int = 80_000
+    max_iterations: int = 40_000
