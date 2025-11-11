@@ -34,7 +34,7 @@ To push the robot while playing, you can double click on the trunk of the robot 
 Then, while holding the left-ctrl key, right-click and drag to apply a force to the robot.
 
 This agent aims to have straight legs and to reject moderate pushes, which tends to result in having alternated legs as it seems 
-more effective for rejection of disturbances. To play with the velocity control agent with backward bent legs (WIP), use the following command:
+more effective for rejection of disturbances. To play with the velocity control agent with backward bent legs, use the following command:
 
 ```
 uv run play Mjlab-Velocity-Upkie-Legs-Backward-Play --checkpoint-file logs/rsl_rl/upkie_velocity/bests/legs_backward.pt
