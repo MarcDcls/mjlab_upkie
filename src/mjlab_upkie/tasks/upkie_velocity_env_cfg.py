@@ -464,7 +464,7 @@ class UpkieVelocityEnvWithPushCfg(UpkieVelocityEnvCfg):
             "x": (-0.3, 0.3),
             "y": (0.0, 0.0),
         }
-        self.curriculum.push_intensity["intensities"] = [
+        self.curriculum.push_intensity.params["intensities"] = [
             (20001 * 24, 1.0),
             (30001 * 24, 2.0),
         ]
@@ -500,7 +500,7 @@ class UpkieVelocityEnvLegsBackwardWithPushCfg(UpkieVelocityEnvLegsBackwardCfg):
             "x": (-0.3, 0.3),
             "y": (0.0, 0.0),
         }
-        self.curriculum.push_intensity["intensities"] = [
+        self.curriculum.push_intensity.params["intensities"] = [
             (20001 * 24, 1.0),
             (30001 * 24, 2.0),
         ]
