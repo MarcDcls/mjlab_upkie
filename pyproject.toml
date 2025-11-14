@@ -7,9 +7,9 @@ name = "mjlab-upkie"
 version = "0.1.0"
 description = "Upkie example"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.14"
 dependencies = [
-    "mjlab",
+    "mjlab"
 ]
 
 [project.entry-points."mjlab.tasks"]
@@ -20,4 +20,4 @@ src = ["src"]  # Helpful for recognizing first-party imports.
 indent-width = 4
 
 [tool.uv.sources]
-mjlab = { git = "https://github.com/mujocolab/mjlab.git", rev = "cb0d5d3" }
+mjlab = { git = "https://github.com/mujocolab/mjlab.git", rev = "085be5a" }

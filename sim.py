@@ -101,12 +101,18 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-b", "--backward-leg", action="store_true")
-    parser.add_argument("-o", "--onnx-model-path", type=str, default="logs/rsl_rl/upkie_velocity/bests/default_no_push_tmp.onnx")
+    parser.add_argument("-o", "--onnx-model-path", type=str, default="logs/rsl_rl/upkie_velocity/bests/default_no_push.onnx")
     args = parser.parse_args()
 
     onnx_model = onnx.load(args.onnx_model_path)
     onnx.checker.check_model(onnx_model)
     ort_sess = ort.InferenceSession(args.onnx_model_path)
+
+    meta = ort_sess.get_modelmeta()
+    print("ONNX model metadata:")
+    for key, value in meta.custom_metadata_map.items():
+        print(f"  {key}: {value}")
+    exit()
 
     model: mujoco.MjModel = mujoco.MjModel.from_xml_path(robot_path)
     data: mujoco.MjData = mujoco.MjData(model)
