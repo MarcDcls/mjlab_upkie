@@ -419,50 +419,64 @@ class UpkieVelocityEnvCfg(ManagerBasedRlEnvCfg):
 def UpkieVelocityEnvCfg() -> ManagerBasedRlEnvCfg:
     site_names = ["left_foot", "right_foot"]
 
-    feet_sensor_cfg = ContactSensorCfg(
-        name="feet_ground_contact",
-        primary=ContactMatch(
-            mode="subtree",
-            pattern=r"^(left_foot_link|right_foot_link)$",
-            entity="robot",
-        ),
-        secondary=ContactMatch(mode="body", pattern="terrain"),
-        fields=("found", "force"),
-        reduce="netforce",
-        num_slots=1,
-        track_air_time=True,
-    )
-
-    self_collision_cfg = ContactSensorCfg(
-        name="self_collision",
-        primary=ContactMatch(mode="subtree", pattern="Trunk", entity="robot"),
-        secondary=ContactMatch(mode="subtree", pattern="Trunk", entity="robot"),
-        fields=("found",),
-        reduce="none",
-        num_slots=1,
-    )
-
     foot_frictions_geom_names = (
-        "Left_Foot_collision",
-        "Right_Foot_collision",
+        "left_foot_collision",
+        "right_foot_collision",
     )
 
     cfg: ManagerBasedRlEnvCfg = create_velocity_env_cfg(
         viewer_body_name="Trunk",
-        robot_cfg=BOOSTER_K1_ROBOT_CFG,
+        robot_cfg=DEFAULT_UPKIE_CFG,
         action_scale=0.75,
-        posture_std_standing={".*": 0.05},
-        posture_std_walking=std_walking,
-        posture_std_running=std_walking,
+        posture_std_standing=DEFAULT_POSE,
+        posture_std_walking=DEFAULT_POSE,
+        posture_std_running=DEFAULT_POSE,
         site_names=site_names,
-        feet_sensor_cfg=feet_sensor_cfg,
-        self_collision_sensor_cfg=self_collision_cfg,
         foot_friction_geom_names=foot_frictions_geom_names,
         body_ang_vel_weight=-0.05,
         angular_momentum_weight=-0.02,
         self_collision_weight=-1.0,
         air_time_weight=0.0,
     )
+
+    # feet_sensor_cfg = ContactSensorCfg(
+    #     name="feet_ground_contact",
+    #     primary=ContactMatch(
+    #         mode="subtree",
+    #         pattern=r"^(left_foot|right_foot)$",
+    #         entity="robot",
+    #     ),
+    #     secondary=ContactMatch(mode="body", pattern="terrain"),
+    #     fields=("found", "force"),
+    #     reduce="netforce",
+    #     num_slots=1,
+    #     track_air_time=True,
+    # )
+
+    # self_collision_cfg = ContactSensorCfg(
+    #     name="self_collision",
+    #     primary=ContactMatch(mode="subtree", pattern="trunk", entity="robot"),
+    #     secondary=ContactMatch(mode="subtree", pattern="trunk", entity="robot"),
+    #     fields=("found",),
+    #     reduce="none",
+    #     num_slots=1,
+    # )
+
+    nonfoot_ground_cfg = ContactSensorCfg(
+        name="nonfoot_ground_touch",
+        primary=ContactMatch(
+            mode="geom",
+            entity="robot",
+            pattern=r".*_collision\d*$",
+            exclude=tuple(["left_foot_collision", "right_foot_collision"]),
+        ),
+        secondary=ContactMatch(mode="body", pattern="terrain"),
+        fields=("found",),
+        reduce="none",
+        num_slots=1,
+    )
+
+    cfg.scene.sensors = (nonfoot_ground_cfg,)
 
     # Removing base lin velocity observation
     del cfg.observations["policy"].terms["base_lin_vel"]
