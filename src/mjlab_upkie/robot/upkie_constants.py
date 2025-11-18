@@ -60,7 +60,7 @@ FULL_COLLISION = CollisionCfg(
 ARTICULATION_CFG = EntityArticulationInfoCfg(
     actuators=(
         XmlPositionActuatorCfg(joint_names_expr=tuple(POS_CTRL_JOINT_NAMES)),
-        XmlVelocityActuatorCfg(joint_names_expr=tuple(VEL_CTRL_JOINT_NAMES)),
+        XmlPositionActuatorCfg(joint_names_expr=tuple(VEL_CTRL_JOINT_NAMES)), # XXX: should be velocity, but break the old agents
     ),
 )
 
