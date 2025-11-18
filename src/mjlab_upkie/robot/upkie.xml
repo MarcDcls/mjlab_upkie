@@ -136,7 +136,7 @@
     </actuator>
 
     <sensor>
-        <framequat name="orientation" objtype="site" objname="imu" />
+        <framequat name="imu_quat" objtype="site" objname="imu" />
         <gyro name="imu_ang_vel" site="imu" />
         <velocimeter name="imu_lin_vel" site="imu" />
     </sensor>
