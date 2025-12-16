@@ -1,0 +1,13 @@
+{
+    "configuration": "default",
+    "documentId": "626c0feba56391e940274c5a",
+    "documentMicroversion": "f91d52f10c944ff18885f766",
+    "elementId": "ce806268ab131e82edfc1171",
+    "fullConfiguration": "default",
+    "id": "MBDWclhP8uNZTo13g",
+    "isStandardContent": false,
+    "name": "wheel_hub <1>",
+    "partId": "JHD",
+    "suppressed": false,
+    "type": "Part"
+}
