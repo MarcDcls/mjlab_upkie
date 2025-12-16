@@ -6,7 +6,7 @@ import os
 from dataclasses import dataclass
 from mjlab.entity import Entity, EntityCfg, EntityArticulationInfoCfg
 from mjlab.actuator import XmlPositionActuatorCfg, XmlVelocityActuatorCfg
-from mjlab.utils.spec_config import ActuatorCfg, CollisionCfg
+from mjlab.utils.spec_config import CollisionCfg
 
 UPKIE_XML: Path = Path(os.path.dirname(__file__)) / "upkie.xml"
 assert UPKIE_XML.exists(), f"XML not found: {UPKIE_XML}"
@@ -38,7 +38,7 @@ DEFAULT_POSE = {
     "right_wheel": 0.0,
 }
 
-RK_POS = {
+RK_POSE = {
     "left_hip": 0.3,
     "left_knee": -0.6,
     "left_wheel": 0.0,
@@ -60,7 +60,7 @@ FULL_COLLISION = CollisionCfg(
 ARTICULATION_CFG = EntityArticulationInfoCfg(
     actuators=(
         XmlPositionActuatorCfg(joint_names_expr=tuple(POS_CTRL_JOINT_NAMES)),
-        XmlVelocityActuatorCfg(joint_names_expr=tuple(VEL_CTRL_JOINT_NAMES)),
+        XmlVelocityActuatorCfg(joint_names_expr=tuple(VEL_CTRL_JOINT_NAMES)), # XXX: should be velocity, but break the old agents
     ),
 )
 
@@ -77,7 +77,7 @@ DEFAULT_UPKIE_CFG = EntityCfg(
 RK_UPKIE_CFG = EntityCfg(
     spec_fn=get_spec,
     init_state=EntityCfg.InitialStateCfg(
-        joint_pos=RK_POS,
+        joint_pos=RK_POSE,
         joint_vel={".*": 0.0},
     ),
     collisions=(FULL_COLLISION,),
