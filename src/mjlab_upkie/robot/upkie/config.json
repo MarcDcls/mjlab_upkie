@@ -2,6 +2,7 @@
     "url": "https://cad.onshape.com/documents/626c0feba56391e940274c5a/w/1443de40ca7efab6f3e18861/e/f40baedc39efd40637593503",
     "output_format": "mujoco",
     "simplify_stls": "visual",
+    "use_scads": true,
     "max_stl_size": 1,
     "additional_xml": "no_slip.xml",
     "ignore": {
