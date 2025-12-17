@@ -109,10 +109,6 @@ def upkie_velocity_env_cfg(
         "base_lin_vel": ObservationTermCfg(
             func=lambda env: env.sim.data.qvel[:, 0:3],
         ),
-        # "foot_contact_forces": ObservationTermCfg(
-        #     func=mdp_vel.foot_contact_forces,
-        #     params={"sensor_name": "feet_ground_contact"},
-        # ),
     }
 
     observations = {
@@ -250,13 +246,11 @@ def upkie_velocity_env_cfg(
         "track_linear_velocity": RewardTermCfg(
             func=mdp_vel.track_linear_velocity,
             weight=2.0,
-            # weight=2.5 if reverse_knee else 2.0,
             params={"command_name": "twist", "std": math.sqrt(0.1)},
         ),
         "track_angular_velocity": RewardTermCfg(
             func=mdp_vel.track_angular_velocity,
             weight=2.0,
-            # weight=2.0 if reverse_knee else 2.5,
             params={"command_name": "twist", "std": math.sqrt(0.1)},
         ),
         "upright": RewardTermCfg(
@@ -322,9 +316,9 @@ def upkie_velocity_env_cfg(
             params={
                 "intensities": [
                     (0, 0.0),
-                    (20001 * 24, 1.0),
-                    (30001 * 24, 2.0),
-                    (50001 * 24, 3.0),
+                    (15001 * 24, 1.0),
+                    (25001 * 24, 2.0),
+                    (45001 * 24, 3.0),
                 ],
             },
         ),
@@ -353,27 +347,27 @@ def upkie_velocity_env_cfg(
 
     cfg.scene.entities = {"robot": RK_UPKIE_CFG if reverse_knee else DEFAULT_UPKIE_CFG}
 
-    # feet_sensor_cfg = ContactSensorCfg(
-    #     name="feet_ground_contact",
-    #     primary=ContactMatch(
-    #         mode="subtree",
-    #         pattern=r"^(left_foot|right_foot)$",
-    #         entity="robot",
-    #     ),
-    #     secondary=ContactMatch(mode="body", pattern="terrain"),
-    #     fields=("found", "force"),
-    #     reduce="netforce",
-    #     num_slots=1,
-    #     track_air_time=True,
-    # )
-    # self_collision_cfg = ContactSensorCfg(
-    #     name="self_collision",
-    #     primary=ContactMatch(mode="subtree", pattern="trunk", entity="robot"),
-    #     secondary=ContactMatch(mode="subtree", pattern="trunk", entity="robot"),
-    #     fields=("found",),
-    #     reduce="none",
-    #     num_slots=1,
-    # )
+    feet_sensor_cfg = ContactSensorCfg(
+        name="feet_ground_contact",
+        primary=ContactMatch(
+            mode="subtree",
+            pattern=r"^(left_foot|right_foot)$",
+            entity="robot",
+        ),
+        secondary=ContactMatch(mode="body", pattern="terrain"),
+        fields=("found", "force"),
+        reduce="netforce",
+        num_slots=1,
+        track_air_time=True,
+    )
+    self_collision_cfg = ContactSensorCfg(
+        name="self_collision",
+        primary=ContactMatch(mode="subtree", pattern="trunk", entity="robot"),
+        secondary=ContactMatch(mode="subtree", pattern="trunk", entity="robot"),
+        fields=("found",),
+        reduce="none",
+        num_slots=1,
+    )
     nonfoot_ground_cfg = ContactSensorCfg(
         name="nonfoot_ground_touch",
         primary=ContactMatch(
@@ -422,6 +416,6 @@ class UpkieRlCfg(RslRlOnPolicyRunnerCfg):
     )
     wandb_project: str = "mjlab_upkie"
     experiment_name: str = "upkie_velocity"
-    save_interval: int = 1000
+    save_interval: int = 5000
     num_steps_per_env: int = 24
     max_iterations: int = 100_000

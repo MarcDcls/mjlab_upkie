@@ -3,8 +3,7 @@ import mujoco
 import numpy as np
 
 import os
-from dataclasses import dataclass
-from mjlab.entity import Entity, EntityCfg, EntityArticulationInfoCfg
+from mjlab.entity import EntityCfg, EntityArticulationInfoCfg
 from mjlab.actuator import XmlPositionActuatorCfg, XmlVelocityActuatorCfg
 from mjlab.utils.spec_config import CollisionCfg
 
