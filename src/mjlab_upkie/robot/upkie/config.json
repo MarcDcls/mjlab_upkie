@@ -1,32 +1,25 @@
 {
-    "url": "https://cad.onshape.com/documents/626c0feba56391e940274c5a/v/07a5165c0392847eebe6b986/e/f40baedc39efd40637593503",
+    "url": "https://cad.onshape.com/documents/626c0feba56391e940274c5a/w/1443de40ca7efab6f3e18861/e/f40baedc39efd40637593503",
     "output_format": "mujoco",
-    "no_collision_meshes": true,
     "simplify_stls": "visual",
     "max_stl_size": 1,
-    "use_scads": true,
     "additional_xml": "no_slip.xml",
-    "joint_properties": {
-        "default": {
-            "type": "motor"
-        },
-        "left_hip": {
-            "class": "qdd100"
-        },
-        "right_hip": {
-            "class": "qdd100"
-        },
-        "left_knee": {
-            "class": "qdd100"
-        },
-        "right_knee": {
-            "class": "qdd100"
-        },
-        "left_wheel": {
-            "class": "mj5208"
-        },
-        "right_wheel": {
-            "class": "mj5208"
-        }
+    "ignore": {
+        "frame": "all",
+        "left_side": "collision",
+        "right_side": "collision",
+        "tibia": "collision",
+        "femur": "collision",
+        "wheel_hub": "collision",
+        "mj5208_rotor": "collision",
+        "mj5208_stator": "collision",
+        "controller_bracket": "collision",
+        "moteus_controller": "collision",
+        "qdd100_rotor": "collision",
+        "raspberry": "collision",
+        "power_dist": "collision",
+        "battery_tattu": "collision",
+        "switch": "collision",
+        "separating_panel": "collision"
     }
 }
