@@ -9,10 +9,10 @@
       <joint frictionloss="0.1" armature="0.005"/>
       <position dampratio="1"/>
       <default class="visual">
-        <geom type="mesh" contype="0" conaffinity="0" group="2"/>
+        <geom type="mesh" contype="0" conaffinity="0" density="0" group="2"/>
       </default>
       <default class="collision">
-        <geom group="3"/>
+        <geom group="3" contype="1" conaffinity="1"/>
       </default>
     </default>
   </default>
@@ -45,12 +45,12 @@
       <!-- Part front_opening -->
       <geom type="mesh" class="visual" pos="6.92065e-16 -0.085 0.125" quat="0.707107 1.32681e-15 1.08247e-15 0.707107" mesh="front_opening" material="front_opening_material"/>
       <!-- Part qdd100_stator -->
-      <geom class="collision" pos="1.68912e-16 0.09935 0.0602" quat="0.5 0.5 0.5 -0.5" type="cylinder" size="0.05 0.01435"/>
+      <geom name="trunk_collision2" class="collision" pos="1.68912e-16 0.09935 0.0602" quat="0.5 0.5 0.5 -0.5" type="cylinder" size="0.05 0.01435"/>
       <geom type="mesh" class="visual" pos="2.79473e-16 0.085 0.1252" quat="0.707107 -2.93569e-16 9.99201e-16 -0.707107" mesh="qdd100_stator" material="qdd100_stator_material"/>
       <!-- Part back_opening -->
       <geom type="mesh" class="visual" pos="-1.02878e-15 -0.085 0.125" quat="0.707107 1.32681e-15 1.05471e-15 0.707107" mesh="back_opening" material="back_opening_material"/>
       <!-- Part qdd100_stator_2 -->
-      <geom class="collision" pos="-5.90135e-18 -0.09935 0.0602" quat="0.5 -0.5 0.5 0.5" type="cylinder" size="0.05 0.01435"/>
+      <geom name="trunk_collision3" class="collision" pos="-5.90135e-18 -0.09935 0.0602" quat="0.5 -0.5 0.5 0.5" type="cylinder" size="0.05 0.01435"/>
       <geom type="mesh" class="visual" pos="1.6458e-16 -0.085 0.1252" quat="0.707107 1.15914e-15 7.77156e-16 0.707107" mesh="qdd100_stator" material="qdd100_stator_material"/>
       <!-- Part battery_tattu -->
       <geom type="mesh" class="visual" pos="0.011 -0.0225 0.0748" quat="8.88178e-16 -1.4988e-15 -0.707107 -0.707107" mesh="battery_tattu" material="battery_tattu_material"/>
@@ -65,7 +65,7 @@
       <!-- Link femur -->
       <body name="femur" pos="1.88318e-16 0.1137 0.0602" quat="5.55112e-16 -5.01408e-16 -0.707107 -0.707107">
         <!-- Joint from trunk to femur -->
-        <joint name="left_hip" type="hinge" range="-1.3322676295501878e-15 6.2831853071795845"/>
+        <joint name="left_hip" type="hinge" range="-3.05433 3.05433"/>
         <inertial pos="-1.9262e-08 -0.142827 0.0596176" mass="0.7645" fullinertia="0.00377771 0.000940238 0.00358651 6.45614e-10 -5.25505e-10 0.000901135"/>
         <!-- Part qdd100_rotor -->
         <geom type="mesh" class="visual" pos="-2.46519e-32 -6.93889e-18 -0.0287" quat="1 0 4.16334e-17 -6.67869e-17" mesh="qdd100_rotor" material="qdd100_rotor_material"/>
@@ -124,7 +124,7 @@
       <!-- Link femur_2 -->
       <body name="femur_2" pos="-1.08058e-17 -0.1137 0.0602" quat="0.707107 0.707107 1.22125e-15 -7.19866e-16">
         <!-- Joint from trunk to femur_2 -->
-        <joint name="right_hip" type="hinge" range="0.0 6.283185307179586"/>
+        <joint name="right_hip" type="hinge" range="-3.05433 3.05433"/>
         <inertial pos="-1.9262e-08 -0.142827 0.0596176" mass="0.7645" fullinertia="0.00377771 0.000940238 0.00358651 6.45614e-10 -5.25505e-10 0.000901135"/>
         <!-- Part qdd100_rotor_3 -->
         <geom type="mesh" class="visual" pos="0 6.93889e-18 -0.0287" quat="1 0 1.11022e-16 1.11022e-16" mesh="qdd100_rotor" material="qdd100_rotor_material"/>
