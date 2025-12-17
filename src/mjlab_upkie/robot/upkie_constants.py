@@ -8,7 +8,7 @@ from mjlab.entity import Entity, EntityCfg, EntityArticulationInfoCfg
 from mjlab.actuator import XmlPositionActuatorCfg, XmlVelocityActuatorCfg
 from mjlab.utils.spec_config import CollisionCfg
 
-UPKIE_XML: Path = Path(os.path.dirname(__file__)) / "upkie.xml"
+UPKIE_XML: Path = Path(os.path.dirname(__file__)) / "upkie/robot.xml"
 assert UPKIE_XML.exists(), f"XML not found: {UPKIE_XML}"
 
 
@@ -60,7 +60,7 @@ FULL_COLLISION = CollisionCfg(
 ARTICULATION_CFG = EntityArticulationInfoCfg(
     actuators=(
         XmlPositionActuatorCfg(joint_names_expr=tuple(POS_CTRL_JOINT_NAMES)),
-        XmlVelocityActuatorCfg(joint_names_expr=tuple(VEL_CTRL_JOINT_NAMES)), # XXX: should be velocity, but break the old agents
+        XmlVelocityActuatorCfg(joint_names_expr=tuple(VEL_CTRL_JOINT_NAMES)),
     ),
 )
 
