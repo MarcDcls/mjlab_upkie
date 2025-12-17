@@ -2,6 +2,7 @@
 
 import math
 from dataclasses import dataclass, field
+from copy import deepcopy
 import torch
 
 from mjlab.envs import mdp, ManagerBasedRlEnv, ManagerBasedRlEnvCfg
@@ -32,12 +33,9 @@ from mjlab.sensor import ContactMatch, ContactSensorCfg
 from mjlab_upkie.robot.upkie_constants import (
     DEFAULT_UPKIE_CFG,
     RK_UPKIE_CFG,
-    DEFAULT_HEIGHT,
-    RK_HEIGHT,
     DEFAULT_POSE,
     RK_POSE,
     POS_CTRL_JOINT_NAMES,
-    VEL_CTRL_JOINT_NAMES,
     POS_CTRL_JOINT_IDS,
     VEL_CTRL_JOINT_IDS,
 )
@@ -89,15 +87,11 @@ def upkie_velocity_env_cfg(play: bool = False, reverse_knee: bool = False, pushe
             noise=Unoise(n_min=-1.5, n_max=1.5),
         ),
         "trunk_imu": ObservationTermCfg(
-            func=mdp.builtin_sensor,
-            params={"sensor_name": "robot/imu_quat"},
-            # func=lambda env: env.sim.data.qpos[:, 3:7],
+            func=lambda env: env.sim.data.qpos[:, 3:7],
             noise=Unoise(n_min=-0.05, n_max=0.05),
         ),
         "trunk_gyro": ObservationTermCfg(
-            func=mdp.builtin_sensor,
-            params={"sensor_name": "robot/imu_ang_vel"},
-            # func=lambda env: env.sim.data.qvel[:, 3:6],
+            func=lambda env: env.sim.data.qvel[:, 3:6],
             noise=Unoise(n_min=-0.2, n_max=0.2),
         ),
         "actions": ObservationTermCfg(func=mdp.last_action),
@@ -110,9 +104,7 @@ def upkie_velocity_env_cfg(play: bool = False, reverse_knee: bool = False, pushe
     critic_terms = {
         **policy_terms,
         "base_lin_vel": ObservationTermCfg(
-            func=mdp.builtin_sensor,
-            params={"sensor_name": "robot/imu_lin_vel"},
-            # func=lambda env: env.sim.data.qvel[:, 0:3],
+            func=lambda env: env.sim.data.qvel[:, 0:3],
         ),
         # "foot_contact_forces": ObservationTermCfg(
         #     func=mdp_vel.foot_contact_forces,
@@ -195,10 +187,6 @@ def upkie_velocity_env_cfg(play: bool = False, reverse_knee: bool = False, pushe
                 "pose_range": {
                     "x": (-0.5, 0.5),
                     "y": (-0.5, 0.5),
-                    "z": (
-                        RK_HEIGHT if reverse_knee else DEFAULT_HEIGHT,
-                        RK_HEIGHT if reverse_knee else DEFAULT_HEIGHT,
-                    ),
                     "yaw": (-3.14, 3.14),
                 },
                 "velocity_range": {},
@@ -335,9 +323,9 @@ def upkie_velocity_env_cfg(play: bool = False, reverse_knee: bool = False, pushe
     ################# Configuration ################
 
     cfg = ManagerBasedRlEnvCfg(
-        scene=SCENE_CFG,
-        viewer=VIEWER_CONFIG,
-        sim=SIM_CFG,
+        scene=deepcopy(SCENE_CFG),
+        viewer=deepcopy(VIEWER_CONFIG),
+        sim=deepcopy(SIM_CFG),
         observations=observations,
         actions=actions,
         commands=commands,
@@ -388,6 +376,7 @@ def upkie_velocity_env_cfg(play: bool = False, reverse_knee: bool = False, pushe
     cfg.scene.sensors = (nonfoot_ground_cfg,)
 
     return cfg
+
 
 # @dataclass
 # class CommandsCfg:
