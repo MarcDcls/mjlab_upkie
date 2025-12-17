@@ -39,16 +39,16 @@ DEFAULT_POSE = {
 }
 
 RK_POSE = {
-    "left_hip": -0.3,
-    "left_knee": -0.6,
+    "left_hip": 0.3,
+    "left_knee": 0.6,
     "left_wheel": 0.0,
-    "right_hip": 0.3,
-    "right_knee": 0.6,
+    "right_hip": -0.3,
+    "right_knee": -0.6,
     "right_wheel": 0.0,
 }
 
-DEFAULT_HEIGHT = 0.467
-RK_HEIGHT = 0.452
+DEFAULT_HEIGHT = 0.343
+RK_HEIGHT = 0.327
 
 FULL_COLLISION = CollisionCfg(
     geom_names_expr=tuple([".*_collision"]),
@@ -60,7 +60,7 @@ FULL_COLLISION = CollisionCfg(
 ARTICULATION_CFG = EntityArticulationInfoCfg(
     actuators=(
         XmlPositionActuatorCfg(joint_names_expr=tuple(POS_CTRL_JOINT_NAMES)),
-        XmlPositionActuatorCfg(joint_names_expr=tuple(VEL_CTRL_JOINT_NAMES)),
+        XmlVelocityActuatorCfg(joint_names_expr=tuple(VEL_CTRL_JOINT_NAMES)),
     ),
 )
 

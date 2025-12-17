@@ -20,7 +20,7 @@ from mjlab_upkie.robot.upkie_constants import (
 
 robot_path = "src/mjlab_upkie/robot/scene.xml"
 
-action_scale = 0.75
+action_scale = 1.0
 
 def reset_robot(model, data, reverse_knee=False, yaw=0.0):
     pose = RK_POSE if reverse_knee else DEFAULT_POSE

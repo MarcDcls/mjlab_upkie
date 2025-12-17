@@ -24,9 +24,9 @@ from mjlab.sim import MujocoCfg, SimulationCfg
 from mjlab.viewer import ViewerConfig
 from mjlab.managers.scene_entity_config import SceneEntityCfg
 from mjlab.rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, RslRlPpoAlgorithmCfg
-from mjlab.third_party.isaaclab.isaaclab.utils.math import sample_uniform, quat_apply_inverse
+from mjlab.utils.lab_api.math import sample_uniform, quat_apply_inverse
 from mjlab.tasks.velocity import mdp as mdp_vel
-from mjlab.envs.mdp.actions import JointPositionActionCfg
+from mjlab.envs.mdp.actions import JointPositionActionCfg, JointVelocityActionCfg
 from mjlab.tasks.velocity.mdp import UniformVelocityCommandCfg
 from mjlab.sensor import ContactMatch, ContactSensorCfg
 
@@ -36,6 +36,7 @@ from mjlab_upkie.robot.upkie_constants import (
     DEFAULT_POSE,
     RK_POSE,
     POS_CTRL_JOINT_NAMES,
+    VEL_CTRL_JOINT_NAMES,
     POS_CTRL_JOINT_IDS,
     VEL_CTRL_JOINT_IDS,
 )
@@ -67,12 +68,14 @@ SIM_CFG = SimulationCfg(
         iterations=10,
         ls_iterations=20,
     ),
-    nconmax = 256,
-    njmax = 512,
+    nconmax=256,
+    njmax=512,
 )
 
 
-def upkie_velocity_env_cfg(play: bool = False, reverse_knee: bool = False, pushed: bool = False) -> ManagerBasedRlEnvCfg:
+def upkie_velocity_env_cfg(
+    play: bool = False, reverse_knee: bool = False, pushed: bool = False
+) -> ManagerBasedRlEnvCfg:
     """Create Upkie velocity environment configuration."""
 
     ################# Observations #################
@@ -130,10 +133,16 @@ def upkie_velocity_env_cfg(play: bool = False, reverse_knee: bool = False, pushe
     actions: dict[str, ActionTermCfg] = {
         "joint_pos": JointPositionActionCfg(
             asset_name="robot",
-            actuator_names=(".*",),
-            scale=0.75,
+            actuator_names=tuple(POS_CTRL_JOINT_NAMES),
+            scale=1.0,
             use_default_offset=True,
-        )
+        ),
+        "joint_vel": JointVelocityActionCfg(
+            asset_name="robot",
+            actuator_names=tuple(VEL_CTRL_JOINT_NAMES),
+            scale=1.0,
+            use_default_offset=True,
+        ),
     }
 
     ################### Commands ###################
@@ -151,10 +160,10 @@ def upkie_velocity_env_cfg(play: bool = False, reverse_knee: bool = False, pushe
                 lin_vel_x=(-1.0, 1.0),
                 lin_vel_y=(0.0, 0.0),
                 ang_vel_z=(-1.5, 1.5),
-            ), # Overridden in curriculum if not in play mode
+            ),  # Overridden in curriculum if not in play mode
         )
     }
-    
+
     #################### Events ####################
 
     def push_by_setting_velocity(
@@ -208,7 +217,7 @@ def upkie_velocity_env_cfg(play: bool = False, reverse_knee: bool = False, pushe
             params={
                 "velocity_range": {"x": (-0.3, 0.3), "y": (-0.3, 0.3)},
                 "intensity": 0.0,
-            }, # Overridden in curriculum if pushed is True and not play mode
+            },  # Overridden in curriculum if pushed is True and not play mode
         ),
         "foot_friction": EventTermCfg(
             mode="startup",
@@ -240,12 +249,14 @@ def upkie_velocity_env_cfg(play: bool = False, reverse_knee: bool = False, pushe
     rewards = {
         "track_linear_velocity": RewardTermCfg(
             func=mdp_vel.track_linear_velocity,
-            weight=2.5 if reverse_knee else 2.0,
+            weight=2.0,
+            # weight=2.5 if reverse_knee else 2.0,
             params={"command_name": "twist", "std": math.sqrt(0.1)},
         ),
         "track_angular_velocity": RewardTermCfg(
             func=mdp_vel.track_angular_velocity,
-            weight=2.0 if reverse_knee else 2.5,
+            weight=2.0,
+            # weight=2.0 if reverse_knee else 2.5,
             params={"command_name": "twist", "std": math.sqrt(0.1)},
         ),
         "upright": RewardTermCfg(
@@ -259,7 +270,10 @@ def upkie_velocity_env_cfg(play: bool = False, reverse_knee: bool = False, pushe
         "pose": RewardTermCfg(
             func=pose_reward,
             weight=0.3 if reverse_knee else 0.2,
-            params={"std": math.sqrt(0.5) if reverse_knee else math.sqrt(0.1), "target_pose": RK_POSE if reverse_knee else DEFAULT_POSE},
+            params={
+                "std": math.sqrt(0.5) if reverse_knee else math.sqrt(0.1),
+                "target_pose": RK_POSE if reverse_knee else DEFAULT_POSE,
+            },
         ),
         "action_rate_l2": RewardTermCfg(func=mdp.action_rate_l2, weight=-0.1),
     }
@@ -298,8 +312,8 @@ def upkie_velocity_env_cfg(play: bool = False, reverse_knee: bool = False, pushe
                 "command_name": "twist",
                 "velocity_stages": [
                     {"step": 0, "lin_vel_x": (-0.5, 0.5), "ang_vel_z": (-0.5, 0.5)},
-                    {"step": 6001 * 24, "lin_vel_x": (-0.75, 0.75), "ang_vel_z": (-1.0, 1.0)},
-                    {"step": 12001 * 24, "lin_vel_x": (-1.0, 1.0), "ang_vel_z": (-1.5, 1.5)},
+                    {"step": 3001 * 24, "lin_vel_x": (-0.75, 0.75), "ang_vel_z": (-1.0, 1.0)},
+                    {"step": 6001 * 24, "lin_vel_x": (-1.0, 1.0), "ang_vel_z": (-1.5, 1.5)},
                 ],
             },
         ),
@@ -376,316 +390,6 @@ def upkie_velocity_env_cfg(play: bool = False, reverse_knee: bool = False, pushe
     cfg.scene.sensors = (nonfoot_ground_cfg,)
 
     return cfg
-
-
-# @dataclass
-# class CommandsCfg:
-#     twist: mdp_vel.UniformVelocityCommandCfg = term(
-#         mdp_vel.UniformVelocityCommandCfg,
-#         asset_name="robot",
-#         resampling_time_range=(3.0, 8.0),
-#         rel_standing_envs=0.1,
-#         rel_heading_envs=0.3,
-#         heading_command=True,
-#         heading_control_stiffness=0.5,
-#         debug_vis=True,
-#         ranges=mdp_vel.UniformVelocityCommandCfg.Ranges(
-#             lin_vel_x=(0.0, 0.0),
-#             lin_vel_y=(0.0, 0.0),
-#             ang_vel_z=(0.0, 0.0),
-#             heading=(-math.pi, math.pi),
-#         ),
-#     )
-
-
-# @dataclass
-# class UpkieVelocityEnvCfg(ManagerBasedRlEnvCfg):
-#     scene: SceneCfg = field(default_factory=lambda: SCENE_CFG)
-#     viewer: ViewerConfig = field(default_factory=lambda: VIEWER_CONFIG)
-#     sim: SimulationCfg = field(default_factory=lambda: SIM_CFG)
-#     actions: ActionCfg = field(default_factory=ActionCfg)
-#     commands: CommandsCfg = field(default_factory=CommandsCfg)
-#     observations: ObservationCfg = field(default_factory=ObservationCfg)
-#     rewards: RewardCfg = field(default_factory=RewardCfg)
-#     events: EventCfg = field(default_factory=EventCfg)
-#     terminations: TerminationCfg = field(default_factory=TerminationCfg)
-#     curriculum: CurriculumCfg = field(default_factory=CurriculumCfg)
-#     decimation: int = 4
-#     episode_length_s: float = 20.0
-
-#     def __post_init__(self):
-#         self.scene.entities = {"robot": UPKIE_CFG}
-#         self.actions.joint_pos.scale = 0.75
-#         self.viewer.body_name = "trunk"
-#         self.commands.twist.viz.z_offset = 0.75
-#         self.sim.nconmax = 256
-#         self.sim.njmax = 512
-
-#         # Add non-foot ground contact sensor
-#         nonfoot_ground_cfg = ContactSensorCfg(
-#             name="nonfoot_ground_touch",
-#             primary=ContactMatch(
-#                 mode="geom",
-#                 entity="robot",
-#                 pattern=r".*_collision\d*$",
-#                 exclude=tuple(["left_foot_collision", "right_foot_collision"]),
-#             ),
-#             secondary=ContactMatch(mode="body", pattern="terrain"),
-#             fields=("found",),
-#             reduce="none",
-#             num_slots=1,
-#         )
-#         self.scene.sensors = (nonfoot_ground_cfg,)
-
-#         # Set correct geom names for foot friction randomization
-#         self.events.foot_friction.params["asset_cfg"].geom_names = [
-#             "left_foot_collision",
-#             "right_foot_collision",
-#         ]
-
-#         # Flat terrain
-#         self.scene.terrain.terrain_type = "plane"
-#         self.scene.terrain.terrain_generator = None
-
-#         # Reset height
-#         self.events.reset_base.params["pose_range"]["z"] = (
-#             DEFAULT_HEIGHT,
-#             DEFAULT_HEIGHT,
-#         )
-
-#         # Set tracking reward weights
-#         self.rewards.track_linear_velocity.weight = 2.0
-#         self.rewards.track_angular_velocity.weight = 2.5
-#         self.rewards.pose.weight = 0.2
-
-#         # Set curriculum velocity stages
-#         self.curriculum.command_vel.params["velocity_stages"] = [
-#             {"step": 0, "lin_vel_x": (-0.5, 0.5), "ang_vel_z": (-0.5, 0.5)},
-#             {"step": 6001 * 24, "lin_vel_x": (-0.75, 0.75), "ang_vel_z": (-1.0, 1.0)},
-#             {"step": 12001 * 24, "lin_vel_x": (-1.0, 1.0), "ang_vel_z": (-1.5, 1.5)},
-#         ]
-
-#         self.commands.twist.ranges.lin_vel_x = (-1.0, 1.0)
-#         self.commands.twist.ranges.ang_vel_z = (-1.5, 1.5)
-
-
-# def UpkieVelocityEnvCfg(play: bool = False) -> ManagerBasedRlEnvCfg:
-#     cfg: ManagerBasedRlEnvCfg = make_velocity_env_cfg()
-
-#     cfg.scene.entities = {"robot": DEFAULT_UPKIE_CFG}
-
-#     site_names = ["left_foot", "right_foot"]
-
-#     foot_frictions_geom_names = (
-#         "left_foot_collision",
-#         "right_foot_collision",
-#     )
-
-#     # feet_sensor_cfg = ContactSensorCfg(
-#     #     name="feet_ground_contact",
-#     #     primary=ContactMatch(
-#     #         mode="subtree",
-#     #         pattern=r"^(left_foot|right_foot)$",
-#     #         entity="robot",
-#     #     ),
-#     #     secondary=ContactMatch(mode="body", pattern="terrain"),
-#     #     fields=("found", "force"),
-#     #     reduce="netforce",
-#     #     num_slots=1,
-#     #     track_air_time=True,
-#     # )
-#     # self_collision_cfg = ContactSensorCfg(
-#     #     name="self_collision",
-#     #     primary=ContactMatch(mode="subtree", pattern="trunk", entity="robot"),
-#     #     secondary=ContactMatch(mode="subtree", pattern="trunk", entity="robot"),
-#     #     fields=("found",),
-#     #     reduce="none",
-#     #     num_slots=1,
-#     # )
-#     nonfoot_ground_cfg = ContactSensorCfg(
-#         name="nonfoot_ground_touch",
-#         primary=ContactMatch(
-#             mode="geom",
-#             entity="robot",
-#             pattern=r".*_collision\d*$",
-#             exclude=tuple(["left_foot_collision", "right_foot_collision"]),
-#         ),
-#         secondary=ContactMatch(mode="body", pattern="terrain"),
-#         fields=("found",),
-#         reduce="none",
-#         num_slots=1,
-#     )
-#     cfg.scene.sensors = (nonfoot_ground_cfg,)
-
-#     cfg.viewer.body_name = "trunk"
-
-#     joint_pos_action = cfg.actions["joint_pos"]
-#     assert isinstance(joint_pos_action, JointPositionActionCfg)
-#     joint_pos_action.scale = UPKIE_ACTION_SCALES
-
-#     assert cfg.commands is not None
-#     twist_cmd = cfg.commands["twist"]
-#     assert isinstance(twist_cmd, UniformVelocityCommandCfg)
-#     twist_cmd.viz.z_offset = 1.0
-
-#     #   def log_debug(env: ManagerBasedRlEnv, _):
-#     #     print("Sensor")
-#     #     print(env.scene.sensors["feet_ground_contact_left_foot_link_force"].data)
-#     #   cfg.events["log_debug"] = EventTermCfg(mode="interval", func=log_debug, interval_range_s=(0.0, 0.0))
-
-#     cfg.events["reset_base"].params["pose_range"]["z"] = (0.5, 0.6)
-
-#     # cfg.commands["twist"].viz.z_offset = 1.0
-
-#     # Walking on plane only
-#     cfg.scene.terrain.terrain_type = "plane"
-#     cfg.scene.terrain.terrain_generator = None
-
-#     # Disabling curriculum
-#     del cfg.curriculum["terrain_levels"]
-#     del cfg.curriculum["command_vel"]
-
-#     cfg.sim.nconmax = 256
-#     cfg.sim.njmax = 512
-
-#     cfg.events["push_robot"].params["velocity_range"] = {
-#         "x": (-0.5, 0.5),
-#         "y": (-0.5, 0.5),
-#     }
-
-#     # Slightly increased L2 action rate penalty
-#     cfg.rewards["action_rate_l2"].weight = -0.1
-
-#     # Disabling standing and heading envs
-#     command: UniformVelocityCommandCfg = cfg.commands["twist"]
-#     command.rel_standing_envs = 0.0
-#     command.rel_heading_envs = 0.0
-
-#     return cfg
-
-
-# @retval
-# def UpkieVelocityEnvCfg_PLAY() -> ManagerBasedRlEnvCfg:
-#     cfg: ManagerBasedRlEnvCfg = deepcopy(UpkieVelocityEnvCfg)
-#     return cfg
-
-
-# @dataclass
-# class UpkieVelocityEnvWithPushCfg(UpkieVelocityEnvCfg):
-#     def __post_init__(self):
-#         super().__post_init__()
-
-#         # Setting push event parameters
-#         self.events.push_robot.params["velocity_range"] = {
-#             "x": (-0.5, 0.5),
-#             "y": (-0.5, 0.5),
-#         }
-#         self.curriculum.push_intensity.params["intensities"] = [
-#             (30001 * 24, 1.0),
-#             (60001 * 24, 1.7),
-#             (90001 * 24, 2.0),
-#         ]
-
-
-# @dataclass
-# class UpkieVelocityEnvStaticPushCfg(UpkieVelocityEnvCfg):
-#     def __post_init__(self):
-#         super().__post_init__()
-
-#         # No movement
-#         self.commands.twist.ranges.lin_vel_x = (0.0, 0.0)
-#         self.commands.twist.ranges.ang_vel_z = (0.0, 0.0)
-#         self.curriculum.command_vel.params["velocity_stages"] = []
-#         self.rewards.track_linear_velocity.weight = 0.0
-#         self.rewards.track_angular_velocity.weight = 0.0
-
-#         # Setting push event parameters
-#         self.events.push_robot.params["velocity_range"] = {
-#             "x": (-0.5, 0.5),
-#             "y": (-0.3, 0.3),
-#         }
-#         self.curriculum.push_intensity.params["intensities"] = [
-#             (2001 * 24, 1.0),
-#             (12001 * 24, 2.0),
-#             (35001 * 24, 3.0),
-#         ]
-
-
-# @dataclass
-# class UpkieVelocityEnvLegsBackwardCfg(UpkieVelocityEnvCfg):
-#     def __post_init__(self):
-#         super().__post_init__()
-
-#         # Set tracking reward weights
-#         self.rewards.track_linear_velocity.weight = 2.5
-#         self.rewards.track_angular_velocity.weight = 2.0
-
-#         # Reset robot in default pose (with legs backward)
-#         self.events.reset_base.params["pose_range"]["z"] = (
-#             RK_HEIGHT,
-#             RK_HEIGHT,
-#         )
-#         self.events.reset_robot_joints.func = reset_legs_backward
-#         self.events.reset_robot_joints.params = {}
-
-#         # Modify the pose reward to favor backward legs
-#         self.rewards.pose.func = backward_legs
-#         self.rewards.pose.weight = 0.3
-#         self.rewards.pose.params = {"std": math.sqrt(0.5)}
-
-
-# @dataclass
-# class UpkieVelocityEnvLegsBackwardWithPushCfg(UpkieVelocityEnvLegsBackwardCfg):
-#     def __post_init__(self):
-#         super().__post_init__()
-
-#         # Setting push event parameters
-#         self.events.push_robot.params["velocity_range"] = {
-#             "x": (-0.3, 0.3),
-#             "y": (0.0, 0.0),
-#         }
-#         self.curriculum.push_intensity.params["intensities"] = [
-#             (20001 * 24, 1.0),
-#             (30001 * 24, 2.0),
-#         ]
-
-
-# @dataclass
-# class UpkieVelocityEnvCfg_PLAY(UpkieVelocityEnvCfg):
-#     episode_length_s: float = 1e9  # Very long episodes for PLAY mode
-
-#     def __post_init__(self):
-#         super().__post_init__()
-
-#         # Set only one velocity stage for PLAY mode
-#         self.curriculum.command_vel.params["velocity_stages"] = []
-#         self.commands.twist.ranges.lin_vel_x = (-1, 1)
-#         self.commands.twist.ranges.ang_vel_z = (-1.5, 1.5)
-
-
-# @dataclass
-# class UpkieVelocityEnvLegsBackwardCfg_PLAY(UpkieVelocityEnvLegsBackwardCfg):
-#     episode_length_s: float = 1e9  # Very long episodes for PLAY mode
-
-#     def __post_init__(self):
-#         super().__post_init__()
-
-#         # Set only one velocity stage for PLAY mode
-#         self.curriculum.command_vel.params["velocity_stages"] = []
-#         self.commands.twist.ranges.lin_vel_x = (-1, 1)
-#         self.commands.twist.ranges.ang_vel_z = (-1.5, 1.5)
-
-
-# @dataclass
-# class UpkieVelocityEnvStaticPushCfg_PLAY(UpkieVelocityEnvStaticPushCfg):
-#     episode_length_s: float = 1e9  # Very long episodes for PLAY mode
-
-#     def __post_init__(self):
-#         super().__post_init__()
-
-#         # Set only one push intensity for PLAY mode
-#         self.curriculum.push_intensity.params["intensities"] = []
-#         self.events.push_robot.params["intensity"] = 3.0
 
 
 @dataclass
