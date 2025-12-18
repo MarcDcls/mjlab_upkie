@@ -116,7 +116,7 @@
             <!-- Part mj5208_rotor -->
             <geom type="mesh" class="visual" pos="6.93889e-18 0 0.0075" quat="0 1 0 0" mesh="mj5208_rotor" material="mj5208_rotor_material"/>
             <!-- Part tire -->
-            <geom name="left_foot_collision" class="collision" pos="4.51028e-16 -3.33067e-16 -0.0312" quat="0.707107 0.707107 1.11022e-16 3.81339e-17" type="sphere" size="0.056"/>
+            <geom name="left_foot_collision" class="collision" pos="4.85723e-16 -3.53884e-16 -0.0312" quat="3.06162e-17 -1 -5.39294e-17 1.45037e-25" type="cylinder" size="0.055 0.022"/>
             <geom type="mesh" class="visual" pos="4.51028e-16 -3.33067e-16 -0.0312" quat="0.707107 0.707107 1.11022e-16 3.81339e-17" mesh="tire" material="tire_material"/>
           </body>
         </body>
@@ -175,7 +175,7 @@
             <!-- Part mj5208_rotor_2 -->
             <geom type="mesh" class="visual" pos="0 0 0.0075" quat="0 1 0 0" mesh="mj5208_rotor" material="mj5208_rotor_material"/>
             <!-- Part tire_2 -->
-            <geom name="right_foot_collision" class="collision" pos="1.66533e-16 7.22077e-17 -0.0312" quat="0.707107 0.707107 -0 -1.16514e-30" type="sphere" size="0.056"/>
+            <geom name="right_foot_collision" class="collision" pos="1.66533e-16 7.22077e-17 -0.0312" quat="0 1 0 0" type="cylinder" size="0.055 0.022"/>
             <geom type="mesh" class="visual" pos="1.66533e-16 7.22077e-17 -0.0312" quat="0.707107 0.707107 -0 -1.16514e-30" mesh="tire" material="tire_material"/>
           </body>
         </body>
@@ -251,6 +251,44 @@
 
   <sensor>
     <framequat name="imu_quad" objtype="site" objname="imu" />
+    <gyro name="imu_ang_vel" site="imu" />
+    <velocimeter name="imu_lin_vel" site="imu" />
+  </sensor>
+
+  <equality/>
+</mujoco>
+    <material name="front_opening_material" rgba="0.513725 0.415686 0.733333 1"/>
+    <material name="qdd100_stator_material" rgba="0.196078 0.196078 0.196078 1"/>
+    <material name="back_opening_material" rgba="0.513725 0.415686 0.733333 1"/>
+    <material name="battery_tattu_material" rgba="0.701961 0.701961 0.701961 1"/>
+    <material name="raspberry_material" rgba="0.627451 0.627451 0.627451 1"/>
+    <material name="front_cover_material" rgba="0.513725 0.415686 0.733333 1"/>
+    <material name="qdd100_rotor_material" rgba="0.196078 0.196078 0.196078 1"/>
+    <material name="qdd100_support_material" rgba="0.513725 0.415686 0.733333 1"/>
+    <material name="femur_material" rgba="0.901961 0.901961 0.901961 1"/>
+    <material name="link_end_material" rgba="0.513725 0.415686 0.733333 1"/>
+    <material name="qdd100_stator__2_material" rgba="0.196078 0.196078 0.196078 1"/>
+    <material name="moteus_controller_material" rgba="0.909804 0.678431 0.137255 1"/>
+    <material name="mj5208_stator_material" rgba="0.980392 0.713725 0.00392157 1"/>
+    <material name="mj5208_support_material" rgba="0.513725 0.415686 0.733333 1"/>
+    <material name="tibia_material" rgba="0.901961 0.901961 0.901961 1"/>
+    <material name="controller_bracket_material" rgba="0.627451 0.627451 0.627451 1"/>
+    <material name="wheel_hub_material" rgba="0.901961 0.901961 0.901961 1"/>
+    <material name="mj5208_rotor_material" rgba="0.196078 0.196078 0.196078 1"/>
+    <material name="tire_material" rgba="0.301961 0.301961 0.301961 1"/>
+  </asset>
+  
+  <actuator>
+    <position name="left_hip" joint="left_hip" kp="3" kv="0.1" forcerange="-20.0 20.0"/>
+    <position name="left_knee" joint="left_knee" kp="3" kv="0.1" forcerange="-20.0 20.0"/>
+    <velocity name="left_wheel" joint="left_wheel" kv="5" forcerange="-10.0 10.0"/>
+    <position name="right_hip" joint="right_hip" kp="3" kv="0.1" forcerange="-20.0 20.0"/>
+    <position name="right_knee" joint="right_knee" kp="3" kv="0.1" forcerange="-20.0 20.0"/>
+    <velocity name="right_wheel" joint="right_wheel" kv="5" forcerange="-10.0 10.0"/>
+  </actuator>
+
+  <sensor>
+    <framequat name="imu_orientation" objtype="site" objname="imu" />
     <gyro name="imu_ang_vel" site="imu" />
     <velocimeter name="imu_lin_vel" site="imu" />
   </sensor>
