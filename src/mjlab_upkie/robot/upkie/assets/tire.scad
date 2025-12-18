@@ -5,4 +5,5 @@
 // cylinder(r=10, h=10, center=true);
 // sphere(10);
 
-sphere(56);
+rotate([90, 0, 0])
+cylinder(r=55, h=44, center=true);
