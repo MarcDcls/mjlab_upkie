@@ -18,9 +18,10 @@ from mjlab_upkie.robot.upkie_constants import (
     RIGHT_WHEEL,    
 )
 
-robot_path = "src/mjlab_upkie/robot/scene.xml"
-
+robot_path = "src/mjlab_upkie/robot/upkie/scene.xml"
 action_scale = 1.0
+
+command = [0.0, 0.0, 0.0]  # global command variable
 
 def reset_robot(model, data, reverse_knee=False, yaw=0.0):
     pose = RK_POSE if reverse_knee else DEFAULT_POSE
@@ -81,19 +82,40 @@ def get_inputs(model, data, last_action, command):
     obs.extend(command)
 
     # Debug
-    print("joint positions:", obs[0:4])
-    print("wheel velocities:", obs[4:6])
-    print("IMU quaternion:", obs[6:10])
-    print("gyro readings:", obs[10:13])
-    print("last action:", obs[13:19])
-    print("command:", obs[19:22])
-    print("------------------------")
+    # print("joint positions:", obs[0:4])
+    # print("wheel velocities:", obs[4:6])
+    # print("IMU quaternion:", obs[6:10])
+    # print("gyro readings:", obs[10:13])
+    # print("last action:", obs[13:19])
+    # print("command:", obs[19:22])
+    # print("------------------------")
 
     return {
         "obs": [
             np.array(obs, dtype=np.float32),
         ]
     }
+
+
+def keyboard_callback(keycode):
+    """Handle keyboard input for command control."""
+    global command
+    
+    if keycode == 265:  # Up arrow
+        command[0] = min(command[0] + 0.25, 1.0)
+        print(f"Linear velocity: {command[0]:.1f}")
+    elif keycode == 264:  # Down arrow
+        command[0] = max(command[0] - 0.25, -1.0)
+        print(f"Linear velocity: {command[0]:.1f}")
+    elif keycode == 263:  # Left arrow
+        command[2] = min(command[2] + 0.5, 1.5)
+        print(f"Angular velocity: {command[2]:.1f}")
+    elif keycode == 262:  # Right arrow
+        command[2] = max(command[2] - 0.5, -1.5)
+        print(f"Angular velocity: {command[2]:.1f}")
+    elif keycode == 32:  # Space bar - reset commands
+        command = [0.0, 0.0, 0.0]
+        print("Commands reset")
 
 
 if __name__ == "__main__":
@@ -122,55 +144,47 @@ if __name__ == "__main__":
     step_counter = 0
 
     reset_robot(model, data, reverse_knee=args.reverse_knee, yaw=random.uniform(0, 2*np.pi))
-
-    viewer = mujoco.viewer.launch_passive(model, data)
-
     last_action = [0.0] * 6
-    action = [0.0] * 6
-    command = [0.0, 0.0, 0.0]
 
-    last_inference_time = time.time()
-    start_t = time.time()
-    while viewer.is_running():
-        step_start = time.time()      
+    print("\n=== Keyboard Controls ===")
+    print("↑/↓ : Linear velocity ±0.25 m/s")
+    print("←/→ : Angular velocity ±0.5 rad/s")
+    print("SPACE : Reset commands")
+    print("========================\n")
 
-        # Infer at 50 Hz
-        if step_counter % inf_period == 0:
+    # Launch viewer with key callback
+    with mujoco.viewer.launch_passive(model, data, key_callback=keyboard_callback) as viewer:
+        while viewer.is_running():
+            step_start = time.time()      
 
-            print("Infer period:", time.time() - last_inference_time)
-            last_inference_time = time.time()
+            # Infer at 50 Hz
+            if step_counter % inf_period == 0:
 
-            # Get observation and run inference
-            inputs = get_inputs(model, data, last_action, command)
+                # Get observation and run inference
+                inputs = get_inputs(model, data, last_action, command)
+                outputs = ort_sess.run(None, inputs)
+                action = outputs[0][0]
+                last_action = action.tolist()
+                action = action * action_scale
 
-            # if step_counter > 8:
-            #     exit()
+                # Apply action
+                data.ctrl[LEFT_HIP] = action[0]
+                data.ctrl[LEFT_KNEE] = action[1]
+                data.ctrl[RIGHT_HIP] = action[2]
+                data.ctrl[RIGHT_KNEE] = action[3]
+                data.ctrl[LEFT_WHEEL] = action[4]
+                data.ctrl[RIGHT_WHEEL] = action[5]
 
-            outputs = ort_sess.run(None, inputs)
-            action = outputs[0][0]
-            print(action)
-            last_action = action.tolist()
-            action = action * action_scale
+            # Step simulation
+            mujoco.mj_step(model, data)
+            viewer.sync()
+            step_counter += 1
 
-        # Apply action
-        # action = [0, 0, 5, 0, 0, 5]  # for testing
-        data.ctrl[LEFT_HIP] = action[0]
-        data.ctrl[LEFT_KNEE] = action[1]
-        data.ctrl[LEFT_WHEEL] = action[2]
-        data.ctrl[RIGHT_HIP] = action[3]
-        data.ctrl[RIGHT_KNEE] = action[4]
-        data.ctrl[RIGHT_WHEEL] = action[5]
+            # If the robot is falling, reset
+            if data.qpos[2] < 0.2:
+                print("Robot fell, resetting...")
+                reset_robot(model, data, reverse_knee=args.reverse_knee, yaw=random.uniform(0, 2*np.pi))
 
-        # Step simulation
-        mujoco.mj_step(model, data)
-        viewer.sync()
-        step_counter += 1
-
-        # If the robot is falling, reset
-        if data.qpos[2] < 0.2:
-            print("Robot fell, resetting...")
-            reset_robot(model, data, reverse_knee=args.reverse_knee, yaw=random.uniform(0, 2*np.pi))
-
-        time_until_next_step = model.opt.timestep - (time.time() - step_start)
-        if time_until_next_step > 0:
-            time.sleep(time_until_next_step)
+            time_until_next_step = model.opt.timestep - (time.time() - step_start)
+            if time_until_next_step > 0:
+                time.sleep(time_until_next_step)
