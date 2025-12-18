@@ -115,7 +115,7 @@ def upkie_velocity_env_cfg(
         "policy": ObservationGroupCfg(
             terms=policy_terms,
             concatenate_terms=True,
-            enable_corruption=True,
+            enable_corruption=False if play else True,
         ),
         "critic": ObservationGroupCfg(
             terms=critic_terms,
@@ -263,9 +263,9 @@ def upkie_velocity_env_cfg(
         ),
         "pose": RewardTermCfg(
             func=pose_reward,
-            weight=0.3 if reverse_knee else 0.2,
+            weight=0.5,
             params={
-                "std": math.sqrt(0.5) if reverse_knee else math.sqrt(0.1),
+                "std": math.sqrt(0.5),
                 "target_pose": RK_POSE if reverse_knee else DEFAULT_POSE,
             },
         ),
@@ -300,17 +300,17 @@ def upkie_velocity_env_cfg(
                 push_event_cfg.params["intensity"] = intensity
 
     curriculum = {
-        "command_vel": CurriculumTermCfg(
-            func=mdp_vel.commands_vel,
-            params={
-                "command_name": "twist",
-                "velocity_stages": [
-                    {"step": 0, "lin_vel_x": (-0.5, 0.5), "ang_vel_z": (-0.5, 0.5)},
-                    {"step": 3001 * 24, "lin_vel_x": (-0.75, 0.75), "ang_vel_z": (-1.0, 1.0)},
-                    {"step": 6001 * 24, "lin_vel_x": (-1.0, 1.0), "ang_vel_z": (-1.5, 1.5)},
-                ],
-            },
-        ),
+        # "command_vel": CurriculumTermCfg(
+        #     func=mdp_vel.commands_vel,
+        #     params={
+        #         "command_name": "twist",
+        #         "velocity_stages": [
+        #             {"step": 0, "lin_vel_x": (-0.5, 0.5), "ang_vel_z": (-0.5, 0.5)},
+        #             {"step": 3001 * 24, "lin_vel_x": (-0.75, 0.75), "ang_vel_z": (-1.0, 1.0)},
+        #             {"step": 6001 * 24, "lin_vel_x": (-1.0, 1.0), "ang_vel_z": (-1.5, 1.5)},
+        #         ],
+        #     },
+        # ),
         "push_intensity": CurriculumTermCfg(
             func=increase_push_intensity,
             params={
