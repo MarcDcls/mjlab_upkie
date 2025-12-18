@@ -6,6 +6,8 @@ import os
 from mjlab.entity import EntityCfg, EntityArticulationInfoCfg
 from mjlab.actuator import XmlPositionActuatorCfg, XmlVelocityActuatorCfg
 from mjlab.utils.spec_config import CollisionCfg
+from mjlab.sim import MujocoCfg, SimulationCfg
+from mjlab.viewer import ViewerConfig
 
 UPKIE_XML: Path = Path(os.path.dirname(__file__)) / "upkie/robot.xml"
 assert UPKIE_XML.exists(), f"XML not found: {UPKIE_XML}"
@@ -83,6 +85,25 @@ RK_UPKIE_CFG = EntityCfg(
     ),
     collisions=(FULL_COLLISION,),
     articulation=ARTICULATION_CFG,
+)
+
+VIEWER_CONFIG = ViewerConfig(
+    origin_type=ViewerConfig.OriginType.ASSET_BODY,
+    asset_name="robot",
+    body_name="trunk",
+    distance=3.0,
+    elevation=10.0,
+    azimuth=90.0,
+)
+
+SIM_CFG = SimulationCfg(
+    mujoco=MujocoCfg(
+        timestep=0.005,
+        iterations=10,
+        ls_iterations=20,
+    ),
+    nconmax=256,
+    njmax=512,
 )
 
 if __name__ == "__main__":

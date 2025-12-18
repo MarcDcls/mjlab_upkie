@@ -39,6 +39,8 @@ from mjlab_upkie.robot.upkie_constants import (
     VEL_CTRL_JOINT_NAMES,
     POS_CTRL_JOINT_IDS,
     VEL_CTRL_JOINT_IDS,
+    VIEWER_CONFIG,
+    SIM_CFG,
 )
 
 SCENE_CFG = SceneCfg(
@@ -51,25 +53,6 @@ SCENE_CFG = SceneCfg(
     ),
     num_envs=1,
     extent=2.0,
-)
-
-VIEWER_CONFIG = ViewerConfig(
-    origin_type=ViewerConfig.OriginType.ASSET_BODY,
-    asset_name="robot",
-    body_name="trunk",
-    distance=3.0,
-    elevation=10.0,
-    azimuth=90.0,
-)
-
-SIM_CFG = SimulationCfg(
-    mujoco=MujocoCfg(
-        timestep=0.005,
-        iterations=10,
-        ls_iterations=20,
-    ),
-    nconmax=256,
-    njmax=512,
 )
 
 
