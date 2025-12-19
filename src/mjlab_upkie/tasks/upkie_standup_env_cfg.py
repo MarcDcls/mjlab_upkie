@@ -20,8 +20,6 @@ from mjlab.utils.noise import UniformNoiseCfg as Unoise
 from mjlab.scene import SceneCfg
 from mjlab.terrains import TerrainImporterCfg
 from mjlab.terrains.config import ROUGH_TERRAINS_CFG
-from mjlab.sim import MujocoCfg, SimulationCfg
-from mjlab.viewer import ViewerConfig
 from mjlab.managers.scene_entity_config import SceneEntityCfg
 from mjlab.rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, RslRlPpoAlgorithmCfg
 from mjlab.utils.lab_api.math import sample_uniform, quat_apply_inverse
@@ -57,7 +55,7 @@ SCENE_CFG = SceneCfg(
 
 
 def upkie_velocity_env_cfg(
-    play: bool = False, reverse_knee: bool = False, pushed: bool = False, static: bool = False
+    play: bool = False, reverse_knee: bool = False, pushed: bool = False
 ) -> ManagerBasedRlEnvCfg:
     """Create Upkie velocity environment configuration."""
 
@@ -136,10 +134,10 @@ def upkie_velocity_env_cfg(
             debug_vis=True,
             viz=UniformVelocityCommandCfg.VizCfg(z_offset=0.75),
             ranges=UniformVelocityCommandCfg.Ranges(
-                lin_vel_x=(-1.0, 1.0) if not static else (0.0, 0.0),
+                lin_vel_x=(-1.0, 1.0),
                 lin_vel_y=(0.0, 0.0),
-                ang_vel_z=(-1.5, 1.5) if not static else (0.0, 0.0),
-            ),
+                ang_vel_z=(-1.5, 1.5),
+            ),  # Overridden in curriculum if not in play mode
         )
     }
 
@@ -302,13 +300,7 @@ def upkie_velocity_env_cfg(
                     (15001 * 24, 1.0),
                     (25001 * 24, 2.0),
                     (45001 * 24, 3.0),
-                ] if not static else [
-                    (0, 1.0),
-                    (5001 * 24, 2.0),
-                    (10001 * 24, 3.0),
-                    (20001 * 24, 4.0),
-                    (30001 * 24, 5.0),
-                ]
+                ],
             },
         ),
         # "terrain_levels": CurriculumTermCfg(

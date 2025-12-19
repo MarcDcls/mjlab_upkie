@@ -279,12 +279,12 @@
   </asset>
   
   <actuator>
-    <position name="left_hip" joint="left_hip" kp="3" kv="0.1" forcerange="-20.0 20.0"/>
-    <position name="left_knee" joint="left_knee" kp="3" kv="0.1" forcerange="-20.0 20.0"/>
-    <velocity name="left_wheel" joint="left_wheel" kv="5" forcerange="-10.0 10.0"/>
-    <position name="right_hip" joint="right_hip" kp="3" kv="0.1" forcerange="-20.0 20.0"/>
-    <position name="right_knee" joint="right_knee" kp="3" kv="0.1" forcerange="-20.0 20.0"/>
-    <velocity name="right_wheel" joint="right_wheel" kv="5" forcerange="-10.0 10.0"/>
+    <position name="left_hip" joint="left_hip" kp="8" kv="0.1" forcerange="-20.0 20.0"/>
+    <position name="left_knee" joint="left_knee" kp="8" kv="0.1" forcerange="-20.0 20.0"/>
+    <velocity name="left_wheel" joint="left_wheel" kv="0.05" forcerange="-10.0 10.0"/>
+    <position name="right_hip" joint="right_hip" kp="8" kv="0.1" forcerange="-20.0 20.0"/>
+    <position name="right_knee" joint="right_knee" kp="8" kv="0.1" forcerange="-20.0 20.0"/>
+    <velocity name="right_wheel" joint="right_wheel" kv="0.05" forcerange="-10.0 10.0"/>
   </actuator>
 
   <sensor>

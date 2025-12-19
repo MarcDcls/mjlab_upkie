@@ -24,6 +24,14 @@ register_mjlab_task(
 )
 
 register_mjlab_task(
+    task_id="Mjlab-Velocity-Upkie-Static",
+    env_cfg=upkie_velocity_env_cfg(reverse_knee=False, static=True, pushed=True),
+    play_env_cfg=upkie_velocity_env_cfg(reverse_knee=False, static=True, pushed=True, play=True),
+    rl_cfg=UpkieRlCfg(max_iterations=50_000),
+    runner_cls=VelocityOnPolicyRunner,
+)
+
+register_mjlab_task(
     task_id="Mjlab-Velocity-Upkie-RK",
     env_cfg=upkie_velocity_env_cfg(reverse_knee=True),
     play_env_cfg=upkie_velocity_env_cfg(reverse_knee=True, play=True),
@@ -36,5 +44,13 @@ register_mjlab_task(
     env_cfg=upkie_velocity_env_cfg(reverse_knee=True, pushed=True),
     play_env_cfg=upkie_velocity_env_cfg(reverse_knee=True, pushed=True, play=True),
     rl_cfg=UpkieRlCfg(max_iterations=80_000),
+    runner_cls=VelocityOnPolicyRunner,
+)
+
+register_mjlab_task(
+    task_id="Mjlab-Velocity-Upkie-RK-Static",
+    env_cfg=upkie_velocity_env_cfg(reverse_knee=True, static=True, pushed=True),
+    play_env_cfg=upkie_velocity_env_cfg(reverse_knee=True, static=True, pushed=True, play=True),
+    rl_cfg=UpkieRlCfg(max_iterations=50_000),
     runner_cls=VelocityOnPolicyRunner,
 )

@@ -124,7 +124,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-r", "--reverse-knee", action="store_true")
-    parser.add_argument("-o", "--onnx-model-path", type=str, default="logs/rsl_rl/upkie_velocity/bests/default_no_push.onnx")
+    parser.add_argument("-o", "--onnx-model-path", type=str, default="logs/rsl_rl/upkie_velocity/bests/default.onnx")
     args = parser.parse_args()
 
     onnx_model = onnx.load(args.onnx_model_path)
@@ -145,6 +145,7 @@ if __name__ == "__main__":
 
     reset_robot(model, data, reverse_knee=args.reverse_knee, yaw=random.uniform(0, 2*np.pi))
     last_action = [0.0] * 6
+    robot_pose = RK_POSE if args.reverse_knee else DEFAULT_POSE
 
     print("\n=== Keyboard Controls ===")
     print("↑/↓ : Linear velocity ±0.25 m/s")
@@ -168,10 +169,10 @@ if __name__ == "__main__":
                 action = action * action_scale
 
                 # Apply action
-                data.ctrl[LEFT_HIP] = action[0]
-                data.ctrl[LEFT_KNEE] = action[1]
-                data.ctrl[RIGHT_HIP] = action[2]
-                data.ctrl[RIGHT_KNEE] = action[3]
+                data.ctrl[LEFT_HIP] = action[0] + robot_pose["left_hip"]
+                data.ctrl[LEFT_KNEE] = action[1] + robot_pose["left_knee"]
+                data.ctrl[RIGHT_HIP] = action[2] + robot_pose["right_hip"]
+                data.ctrl[RIGHT_KNEE] = action[3] + robot_pose["right_knee"]
                 data.ctrl[LEFT_WHEEL] = action[4]
                 data.ctrl[RIGHT_WHEEL] = action[5]
 
