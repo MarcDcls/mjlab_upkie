@@ -119,7 +119,7 @@ def upkie_velocity_env_cfg(
         "joint_vel": JointVelocityActionCfg(
             asset_name="robot",
             actuator_names=tuple(VEL_CTRL_JOINT_NAMES),
-            scale=1.0,
+            scale=300.0,
             use_default_offset=True,
         ),
     }
