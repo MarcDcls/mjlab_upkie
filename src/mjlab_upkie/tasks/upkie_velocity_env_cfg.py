@@ -57,7 +57,7 @@ SCENE_CFG = SceneCfg(
 
 
 def upkie_velocity_env_cfg(
-    play: bool = False, reverse_knee: bool = False, pushed: bool = False, static: bool = False
+    play: bool = False, reverse_knee: bool = False, static: bool = False
 ) -> ManagerBasedRlEnvCfg:
     """Create Upkie velocity environment configuration."""
 
@@ -196,7 +196,7 @@ def upkie_velocity_env_cfg(
             params={
                 "velocity_range": {"x": (-0.3, 0.3), "y": (-0.3, 0.3)},
                 "intensity": 0.0,
-            },  # Overridden in curriculum if pushed is True and not play mode
+            },  # Overridden in curriculum if not play mode
         ),
         "foot_friction": EventTermCfg(
             mode="startup",
@@ -301,13 +301,14 @@ def upkie_velocity_env_cfg(
                     (0, 0.0),
                     (15001 * 24, 1.0),
                     (25001 * 24, 2.0),
-                    (45001 * 24, 3.0),
+                    (40001 * 24, 3.0),
                 ] if not static else [
-                    (0, 1.0),
+                    (0, 0.0),
+                    (1501, 1.0),
                     (5001 * 24, 2.0),
                     (10001 * 24, 3.0),
                     (20001 * 24, 4.0),
-                    (30001 * 24, 5.0),
+                    (35001 * 24, 5.0),
                 ]
             },
         ),
@@ -407,4 +408,4 @@ class UpkieRlCfg(RslRlOnPolicyRunnerCfg):
     experiment_name: str = "upkie_velocity"
     save_interval: int = 5000
     num_steps_per_env: int = 24
-    max_iterations: int = 100_000
+    max_iterations: int = 60_000
