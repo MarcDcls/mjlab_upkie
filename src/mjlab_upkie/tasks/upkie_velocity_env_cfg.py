@@ -119,7 +119,7 @@ def upkie_velocity_env_cfg(
         "joint_vel": JointVelocityActionCfg(
             asset_name="robot",
             actuator_names=tuple(VEL_CTRL_JOINT_NAMES),
-            scale=300.0,
+            scale=100.0,
             use_default_offset=True,
         ),
     }
@@ -283,17 +283,17 @@ def upkie_velocity_env_cfg(
                 push_event_cfg.params["intensity"] = intensity
 
     curriculum = {
-        # "command_vel": CurriculumTermCfg(
-        #     func=mdp_vel.commands_vel,
-        #     params={
-        #         "command_name": "twist",
-        #         "velocity_stages": [
-        #             {"step": 0, "lin_vel_x": (-0.5, 0.5), "ang_vel_z": (-0.5, 0.5)},
-        #             {"step": 3001 * 24, "lin_vel_x": (-0.75, 0.75), "ang_vel_z": (-1.0, 1.0)},
-        #             {"step": 6001 * 24, "lin_vel_x": (-1.0, 1.0), "ang_vel_z": (-1.5, 1.5)},
-        #         ],
-        #     },
-        # ),
+        "command_vel": CurriculumTermCfg(
+            func=mdp_vel.commands_vel,
+            params={
+                "command_name": "twist",
+                "velocity_stages": [
+                    {"step": 0, "lin_vel_x": (-0.5, 0.5), "ang_vel_z": (-0.5, 0.5)},
+                    {"step": 3001 * 24, "lin_vel_x": (-0.75, 0.75), "ang_vel_z": (-1.0, 1.0)},
+                    {"step": 6001 * 24, "lin_vel_x": (-1.0, 1.0), "ang_vel_z": (-1.5, 1.5)},
+                ],
+            },
+        ),
         "push_intensity": CurriculumTermCfg(
             func=increase_push_intensity,
             params={
