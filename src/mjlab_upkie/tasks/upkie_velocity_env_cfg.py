@@ -32,9 +32,7 @@ from mjlab.sensor import ContactMatch, ContactSensorCfg
 
 from mjlab_upkie.robot.upkie_constants import (
     DEFAULT_UPKIE_CFG,
-    RK_UPKIE_CFG,
     DEFAULT_POSE,
-    RK_POSE,
     POS_CTRL_JOINT_NAMES,
     VEL_CTRL_JOINT_NAMES,
     POS_CTRL_JOINT_IDS,
@@ -56,9 +54,7 @@ SCENE_CFG = SceneCfg(
 )
 
 
-def upkie_velocity_env_cfg(
-    play: bool = False, reverse_knee: bool = False, static: bool = False
-) -> ManagerBasedRlEnvCfg:
+def upkie_velocity_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
     """Create Upkie velocity environment configuration."""
 
     ################# Observations #################
@@ -130,16 +126,16 @@ def upkie_velocity_env_cfg(
         "twist": UniformVelocityCommandCfg(
             asset_name="robot",
             resampling_time_range=(3.0, 8.0),
-            rel_standing_envs=0.0,
+            rel_standing_envs=0.1,
             rel_heading_envs=0.0,
             heading_command=False,
             debug_vis=True,
             viz=UniformVelocityCommandCfg.VizCfg(z_offset=0.75),
             ranges=UniformVelocityCommandCfg.Ranges(
-                lin_vel_x=(-1.0, 1.0) if not static else (0.0, 0.0),
+                lin_vel_x=(-1.0, 1.0),
                 lin_vel_y=(0.0, 0.0),
-                ang_vel_z=(-1.5, 1.5) if not static else (0.0, 0.0),
-            ),
+                ang_vel_z=(-1.5, 1.5),
+            ), # Overridden in curriculum if not play mode
         )
     }
 
@@ -249,7 +245,7 @@ def upkie_velocity_env_cfg(
             weight=0.5,
             params={
                 "std": math.sqrt(0.5),
-                "target_pose": RK_POSE if reverse_knee else DEFAULT_POSE,
+                "target_pose": DEFAULT_POSE,
             },
         ),
         "action_rate_l2": RewardTermCfg(func=mdp.action_rate_l2, weight=-0.1),
@@ -291,9 +287,7 @@ def upkie_velocity_env_cfg(
                     {"step": 0, "lin_vel_x": (-0.5, 0.5), "ang_vel_z": (-0.5, 0.5)},
                     {"step": 3001 * 24, "lin_vel_x": (-0.75, 0.75), "ang_vel_z": (-1.0, 1.0)},
                     {"step": 6001 * 24, "lin_vel_x": (-1.0, 1.0), "ang_vel_z": (-1.5, 1.5)},
-                ] if not static else [
-                    {"step": 0, "lin_vel_x": (0.0, 0.0), "ang_vel_z": (0.0, 0.0)},
-                ],
+                ]
             },
         ),
         "push_intensity": CurriculumTermCfg(
@@ -304,13 +298,6 @@ def upkie_velocity_env_cfg(
                     (15001 * 24, 1.0),
                     (25001 * 24, 2.0),
                     (40001 * 24, 3.0),
-                ] if not static else [
-                    (0, 0.0),
-                    (1501 * 24, 1.0),
-                    (5001 * 24, 2.0),
-                    (10001 * 24, 3.0),
-                    (20001 * 24, 4.0),
-                    (35001 * 24, 5.0),
                 ]
             },
         ),
@@ -337,7 +324,7 @@ def upkie_velocity_env_cfg(
         episode_length_s=20.0,
     )
 
-    cfg.scene.entities = {"robot": RK_UPKIE_CFG if reverse_knee else DEFAULT_UPKIE_CFG}
+    cfg.scene.entities = {"robot": DEFAULT_UPKIE_CFG}
 
     feet_sensor_cfg = ContactSensorCfg(
         name="feet_ground_contact",
