@@ -291,6 +291,8 @@ def upkie_velocity_env_cfg(
                     {"step": 0, "lin_vel_x": (-0.5, 0.5), "ang_vel_z": (-0.5, 0.5)},
                     {"step": 3001 * 24, "lin_vel_x": (-0.75, 0.75), "ang_vel_z": (-1.0, 1.0)},
                     {"step": 6001 * 24, "lin_vel_x": (-1.0, 1.0), "ang_vel_z": (-1.5, 1.5)},
+                ] if not static else [
+                    {"step": 0, "lin_vel_x": (0.0, 0.0), "ang_vel_z": (0.0, 0.0)},
                 ],
             },
         ),
@@ -304,7 +306,7 @@ def upkie_velocity_env_cfg(
                     (40001 * 24, 3.0),
                 ] if not static else [
                     (0, 0.0),
-                    (1501, 1.0),
+                    (1501 * 24, 1.0),
                     (5001 * 24, 2.0),
                     (10001 * 24, 3.0),
                     (20001 * 24, 4.0),
