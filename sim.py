@@ -19,7 +19,7 @@ from mjlab_upkie.robot.upkie_constants import (
 )
 
 robot_path = "src/mjlab_upkie/robot/upkie/scene.xml"
-action_scale = 1.0
+wheel_action_scale = 100.0
 
 command = [0.0, 0.0, 0.0]  # global command variable
 
@@ -166,15 +166,14 @@ if __name__ == "__main__":
                 outputs = ort_sess.run(None, inputs)
                 action = outputs[0][0]
                 last_action = action.tolist()
-                action = action * action_scale
 
                 # Apply action
                 data.ctrl[LEFT_HIP] = action[0] + robot_pose["left_hip"]
                 data.ctrl[LEFT_KNEE] = action[1] + robot_pose["left_knee"]
                 data.ctrl[RIGHT_HIP] = action[2] + robot_pose["right_hip"]
                 data.ctrl[RIGHT_KNEE] = action[3] + robot_pose["right_knee"]
-                data.ctrl[LEFT_WHEEL] = action[4]
-                data.ctrl[RIGHT_WHEEL] = action[5]
+                data.ctrl[LEFT_WHEEL] = action[4] * wheel_action_scale
+                data.ctrl[RIGHT_WHEEL] = action[5] * wheel_action_scale
 
             # Step simulation
             mujoco.mj_step(model, data)
@@ -182,7 +181,7 @@ if __name__ == "__main__":
             step_counter += 1
 
             # If the robot is falling, reset
-            if data.qpos[2] < 0.2:
+            if data.qpos[2] < 0.1:
                 print("Robot fell, resetting...")
                 reset_robot(model, data, reverse_knee=args.reverse_knee, yaw=random.uniform(0, 2*np.pi))
 

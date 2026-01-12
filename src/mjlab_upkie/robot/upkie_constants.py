@@ -39,17 +39,7 @@ DEFAULT_POSE = {
     "right_wheel": 0.0,
 }
 
-RK_POSE = {
-    "left_hip": 0.3,
-    "left_knee": 0.6,
-    "left_wheel": 0.0,
-    "right_hip": -0.3,
-    "right_knee": -0.6,
-    "right_wheel": 0.0,
-}
-
 DEFAULT_HEIGHT = 0.343
-RK_HEIGHT = 0.327
 
 FULL_COLLISION = CollisionCfg(
     geom_names_expr=tuple([".*_collision"]),
@@ -70,17 +60,6 @@ DEFAULT_UPKIE_CFG = EntityCfg(
     init_state=EntityCfg.InitialStateCfg(
         pos=(0, 0, DEFAULT_HEIGHT),
         joint_pos=DEFAULT_POSE,
-        joint_vel={".*": 0.0},
-    ),
-    collisions=(FULL_COLLISION,),
-    articulation=ARTICULATION_CFG,
-)
-
-RK_UPKIE_CFG = EntityCfg(
-    spec_fn=get_spec,
-    init_state=EntityCfg.InitialStateCfg(
-        pos=(0, 0, RK_HEIGHT),
-        joint_pos=RK_POSE,
         joint_vel={".*": 0.0},
     ),
     collisions=(FULL_COLLISION,),
