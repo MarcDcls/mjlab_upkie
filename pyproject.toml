@@ -9,7 +9,8 @@ description = "Upkie example"
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
-    "mjlab"
+    "mjlab",
+    "onnxruntime",
 ]
 
 [project.entry-points."mjlab.tasks"]

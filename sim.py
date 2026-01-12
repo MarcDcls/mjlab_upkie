@@ -7,9 +7,7 @@ import random
 
 from mjlab_upkie.robot.upkie_constants import (
     DEFAULT_POSE,
-    RK_POSE,
     DEFAULT_HEIGHT,
-    RK_HEIGHT,
     LEFT_HIP,
     LEFT_KNEE,
     LEFT_WHEEL,
@@ -23,25 +21,21 @@ wheel_action_scale = 100.0
 
 command = [0.0, 0.0, 0.0]  # global command variable
 
-def reset_robot(model, data, reverse_knee=False, yaw=0.0):
-    pose = RK_POSE if reverse_knee else DEFAULT_POSE
+def reset_robot(model, data, yaw=0.0):
 
     # Set initial joint positions
     data.qpos = np.array([0.0] * model.nq)
-    data.qpos[7 + LEFT_HIP] = pose["left_hip"]
-    data.qpos[7 + LEFT_KNEE] = pose["left_knee"]
-    data.qpos[7 + RIGHT_HIP] = pose["right_hip"]
-    data.qpos[7 + RIGHT_KNEE] = pose["right_knee"]
-    data.qpos[7 + LEFT_WHEEL] = pose["left_wheel"]
-    data.qpos[7 + RIGHT_WHEEL] = pose["right_wheel"]
+    data.qpos[7 + LEFT_HIP] = DEFAULT_POSE["left_hip"]
+    data.qpos[7 + LEFT_KNEE] = DEFAULT_POSE["left_knee"]
+    data.qpos[7 + RIGHT_HIP] = DEFAULT_POSE["right_hip"]
+    data.qpos[7 + RIGHT_KNEE] = DEFAULT_POSE["right_knee"]
+    data.qpos[7 + LEFT_WHEEL] = DEFAULT_POSE["left_wheel"]
+    data.qpos[7 + RIGHT_WHEEL] = DEFAULT_POSE["right_wheel"]
 
     data.qvel = np.array([0.0] * model.nv)
 
     # Set robot initial position
-    if args.reverse_knee:
-        data.qpos[2] = RK_HEIGHT
-    else:
-        data.qpos[2] = DEFAULT_HEIGHT
+    data.qpos[2] = DEFAULT_HEIGHT
 
     # Set robot initial orientation (quaternion)
     cy = np.cos(yaw * 0.5)
@@ -123,7 +117,6 @@ if __name__ == "__main__":
     import onnx
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-r", "--reverse-knee", action="store_true")
     parser.add_argument("-o", "--onnx-model-path", type=str, default="logs/rsl_rl/upkie_velocity/bests/default.onnx")
     args = parser.parse_args()
 
@@ -143,9 +136,8 @@ if __name__ == "__main__":
     inf_period = 20 # 50 Hz inference
     step_counter = 0
 
-    reset_robot(model, data, reverse_knee=args.reverse_knee, yaw=random.uniform(0, 2*np.pi))
+    reset_robot(model, data, yaw=random.uniform(0, 2*np.pi))
     last_action = [0.0] * 6
-    robot_pose = RK_POSE if args.reverse_knee else DEFAULT_POSE
 
     print("\n=== Keyboard Controls ===")
     print("↑/↓ : Linear velocity ±0.25 m/s")
@@ -168,10 +160,10 @@ if __name__ == "__main__":
                 last_action = action.tolist()
 
                 # Apply action
-                data.ctrl[LEFT_HIP] = action[0] + robot_pose["left_hip"]
-                data.ctrl[LEFT_KNEE] = action[1] + robot_pose["left_knee"]
-                data.ctrl[RIGHT_HIP] = action[2] + robot_pose["right_hip"]
-                data.ctrl[RIGHT_KNEE] = action[3] + robot_pose["right_knee"]
+                data.ctrl[LEFT_HIP] = action[0] + DEFAULT_POSE["left_hip"]
+                data.ctrl[LEFT_KNEE] = action[1] + DEFAULT_POSE["left_knee"]
+                data.ctrl[RIGHT_HIP] = action[2] + DEFAULT_POSE["right_hip"]
+                data.ctrl[RIGHT_KNEE] = action[3] + DEFAULT_POSE["right_knee"]
                 data.ctrl[LEFT_WHEEL] = action[4] * wheel_action_scale
                 data.ctrl[RIGHT_WHEEL] = action[5] * wheel_action_scale
 
@@ -183,7 +175,7 @@ if __name__ == "__main__":
             # If the robot is falling, reset
             if data.qpos[2] < 0.1:
                 print("Robot fell, resetting...")
-                reset_robot(model, data, reverse_knee=args.reverse_knee, yaw=random.uniform(0, 2*np.pi))
+                reset_robot(model, data, yaw=random.uniform(0, 2*np.pi))
 
             time_until_next_step = model.opt.timestep - (time.time() - step_start)
             if time_until_next_step > 0:
