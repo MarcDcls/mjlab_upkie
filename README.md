@@ -5,6 +5,7 @@
 
 This repository contains simulation environments for the [Upkie robot](https://github.com/upkie/upkie) 
 built on the [MjLab](https://github.com/mujocolab/mjlab) framework.
+
 I thanks the MjLab team for their great work on this framework, as well as 
 Stéphane Caron and the whole Upkie team for the robot design.
 
@@ -17,12 +18,15 @@ A presentation of this design is available [here](https://cad.onshape.com/docume
 
 ## Install
 
-To install the repository, run the following command in your terminal:
+To install the repository, you need the uv package manager. 
+If you don't have it yet, you can install it by following the instructions [here](https://docs.astral.sh/uv/getting-started/installation/#installation-methods).
+
+Then, clone this repository and run the following command in your terminal:
 ```
 uv sync
 ```
 
-## Using a velocity agent within the environment (GPU required)
+## Using a velocity agent within its Mjlab environment (GPU required)
 
 You can use a pre-trained agent directly in its environment, where random velocity commands are given to the robot at regular intervals. 
 Linear velocity commands are represented by a blue arrow, while angular velocity commands are represented by a green vertical one.
@@ -36,7 +40,7 @@ uv run play Mjlab-Velocity-Upkie --checkpoint-file logs/rsl_rl/upkie_velocity/be
 To push the robot while playing, you can double click on the trunk of the robot in the simulation window. 
 Then, while holding the left-ctrl key, right-click and drag to apply a force to the robot.
 
-## Using a velocity agent in a MuJoCo simulation (CPU supported)
+## Using a velocity agent in a custom MuJoCo simulation (CPU supported)
 
 You can also use the same agent in a MuJoCo simulation, avoiding the need for a GPU. 
 To do so, run the following command:
