@@ -180,6 +180,22 @@ if __name__ == "__main__":
             viewer.sync()
             step_counter += 1
 
+            # Print measured and expected wheel velocities for debugging
+            yaw = np.arctan2(2.0 * (data.qpos[3] * data.qpos[6] + data.qpos[4] * data.qpos[5]),
+                 1.0 - 2.0 * (data.qpos[5]**2 + data.qpos[6]**2))
+            v = data.qvel[0] * np.cos(yaw) + data.qvel[1] * np.sin(yaw)
+            w = data.qvel[5]
+            
+            R = 0.055  # wheel radius
+            D = 0.16   # distance between center and wheels
+            
+            w_l = (v - D * w) / R
+            w_r = -(v + D * w) / R
+            
+            # print(f"Measured Linear vel: {v:.2f} m/s, Angular vel: {w:.2f} rad/s")
+            print(f"Measured Wheel velocities: Left={data.qvel[6 + LEFT_WHEEL]:.2f} rad/s, Right={data.qvel[6 + RIGHT_WHEEL]:.2f} rad/s")
+            print(f"Expected Wheel velocities: Left={w_l:.2f} rad/s, Right={w_r:.2f} rad/s")
+
             # If the robot is falling, reset
             if data.qpos[2] < 0.1:
                 print("Robot fell, resetting...")

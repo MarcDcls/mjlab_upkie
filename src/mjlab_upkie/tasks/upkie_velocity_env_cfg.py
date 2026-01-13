@@ -11,6 +11,7 @@
 import math
 from dataclasses import dataclass, field
 from copy import deepcopy
+from xml.dom.minidom import Entity
 import torch
 
 from mjlab.envs import mdp, ManagerBasedRlEnv, ManagerBasedRlEnvCfg
@@ -228,17 +229,44 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
         joints = env.sim.data.qpos[:, POS_CTRL_JOINT_IDS + 7]
         error = torch.sum(torch.square(joints - targets), dim=1)
         return torch.exp(-error / std**2)
+        
+    def wheel_velocity_reward(
+        env: ManagerBasedRlEnv,
+        std: float,
+        command_name: str,
+        asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+        wheel_radius: float = 0.055,
+        base_wheel_distance: float = 0.16,
+    ) -> torch.Tensor:
+        asset: Entity = env.scene[asset_cfg.name]
+        command = env.command_manager.get_command(command_name)
+        assert command is not None, f"Command '{command_name}' not found."
+        wl_target = (command[:, 0] - base_wheel_distance * command[:, 2]) / wheel_radius
+        wr_target = -(command[:, 0] + base_wheel_distance * command[:, 2]) / wheel_radius
+        target = torch.stack((wl_target, wr_target), dim=1)
+        actual = asset.data.joint_vel[:, VEL_CTRL_JOINT_IDS]
+        error = torch.sum(torch.square(actual - target), dim=1)
+        return torch.exp(-error / std**2)
+
 
     rewards = {
-        "track_linear_velocity": RewardTermCfg(
-            func=mdp_vel.track_linear_velocity,
+        # "track_linear_velocity": RewardTermCfg(
+        #     func=mdp_vel.track_linear_velocity,
+        #     weight=2.0,
+        #     params={"command_name": "twist", "std": math.sqrt(0.1)},
+        # ),
+        # "track_angular_velocity": RewardTermCfg(
+        #     func=mdp_vel.track_angular_velocity,
+        #     weight=2.0,
+        #     params={"command_name": "twist", "std": math.sqrt(0.1)},
+        # ),
+        "track_wheel_velocity": RewardTermCfg(
+            func=wheel_velocity_reward,
             weight=2.0,
-            params={"command_name": "twist", "std": math.sqrt(0.1)},
-        ),
-        "track_angular_velocity": RewardTermCfg(
-            func=mdp_vel.track_angular_velocity,
-            weight=2.0,
-            params={"command_name": "twist", "std": math.sqrt(0.1)},
+            params={
+                "command_name": "twist",
+                "std": math.sqrt(1.0),
+            },
         ),
         "upright": RewardTermCfg(
             func=mdp_vel.flat_orientation,
@@ -256,16 +284,16 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
                 "target_pose": DEFAULT_POSE,
             },
         ),
-        "wheel_velocity_cost": RewardTermCfg(
-            func=mdp.joint_vel_l2,
-            weight=0.0,
-            params={
-                "asset_cfg": SceneEntityCfg(
-                    name="robot",
-                    joint_names=("left_wheel", "right_wheel"),
-                )
-            },
-        ),
+        # "wheel_velocity_cost": RewardTermCfg(
+        #     func=mdp.joint_vel_l2,
+        #     weight=0.0,
+        #     params={
+        #         "asset_cfg": SceneEntityCfg(
+        #             name="robot",
+        #             joint_names=("left_wheel", "right_wheel"),
+        #         )
+        #     },
+        # ),
         "action_rate_l2": RewardTermCfg(func=mdp.action_rate_l2, weight=-0.1),
     }
 
@@ -319,15 +347,15 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
                 ]
             },
         ),
-        "wheel_vel_cost": CurriculumTermCfg(
-            func=set_wheel_vel_cost_weight,
-            params={
-                "weights": [
-                    (0, 0.0),
-                    (12001 * 24, -0.01),
-                ]
-            },
-        ),
+        # "wheel_vel_cost": CurriculumTermCfg(
+        #     func=set_wheel_vel_cost_weight,
+        #     params={
+        #         "weights": [
+        #             (0, 0.0),
+        #             (12001 * 24, -0.01),
+        #         ]
+        #     },
+        # ),
         "push_intensity": CurriculumTermCfg(
             func=increase_push_intensity,
             params={
@@ -433,6 +461,6 @@ class UpkieRlCfg(RslRlOnPolicyRunnerCfg):
     )
     wandb_project: str = "mjlab_upkie"
     experiment_name: str = "upkie_velocity"
-    save_interval: int = 5000
+    save_interval: int = 500
     num_steps_per_env: int = 24
     max_iterations: int = 60_000
