@@ -40,7 +40,7 @@ uv run play Mjlab-Velocity-Upkie --checkpoint-file logs/rsl_rl/upkie_velocity/be
 To push the robot while playing, you can double click on the trunk of the robot in the simulation window. 
 Then, while holding the left-ctrl key, right-click and drag to apply a force to the robot.
 
-## Using a velocity agent in a custom MuJoCo simulation (CPU supported)
+## Using a velocity agent in a MuJoCo simulation (CPU supported)
 
 You can also use the same agent in a MuJoCo simulation, avoiding the need for a GPU. 
 To do so, run the following command:
