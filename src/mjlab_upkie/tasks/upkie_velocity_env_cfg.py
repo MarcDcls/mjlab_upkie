@@ -54,7 +54,7 @@ SCENE_CFG = SceneCfg(
 )
 
 
-def upkie_velocity_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
+def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerBasedRlEnvCfg:
     """Create Upkie velocity environment configuration."""
 
     ################# Observations #################
@@ -126,7 +126,7 @@ def upkie_velocity_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
         "twist": UniformVelocityCommandCfg(
             asset_name="robot",
             resampling_time_range=(3.0, 8.0),
-            rel_standing_envs=0.1,
+            rel_standing_envs=1.0 if static else 0.1,
             rel_heading_envs=0.0,
             heading_command=False,
             debug_vis=True,
@@ -248,6 +248,16 @@ def upkie_velocity_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
                 "target_pose": DEFAULT_POSE,
             },
         ),
+        "wheel_velocity_cost": RewardTermCfg(
+            func=mdp.joint_vel_l2,
+            weight=0.0,
+            params={
+                "asset_cfg": SceneEntityCfg(
+                    name="robot",
+                    joint_names=("left_wheel", "right_wheel"),
+                )
+            },
+        ),
         "action_rate_l2": RewardTermCfg(func=mdp.action_rate_l2, weight=-0.1),
     }
 
@@ -278,6 +288,17 @@ def upkie_velocity_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
             if env.common_step_counter >= step_threshold:
                 push_event_cfg.params["intensity"] = intensity
 
+    def set_wheel_vel_cost_weight(
+        env: ManagerBasedRlEnv,
+        env_ids: torch.Tensor,
+        weights: list[tuple[float, float]],
+    ) -> None:
+        """Set wheel velocity cost weight over time."""
+        reward_cfg = env.reward_manager.get_term_cfg("wheel_velocity_cost")
+        for step_threshold, weight in weights:
+            if env.common_step_counter >= step_threshold:
+                reward_cfg.weight = weight
+
     curriculum = {
         "command_vel": CurriculumTermCfg(
             func=mdp_vel.commands_vel,
@@ -285,8 +306,17 @@ def upkie_velocity_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
                 "command_name": "twist",
                 "velocity_stages": [
                     {"step": 0, "lin_vel_x": (-0.5, 0.5), "ang_vel_z": (-0.5, 0.5)},
-                    {"step": 3001 * 24, "lin_vel_x": (-0.75, 0.75), "ang_vel_z": (-1.0, 1.0)},
-                    {"step": 6001 * 24, "lin_vel_x": (-1.0, 1.0), "ang_vel_z": (-1.5, 1.5)},
+                    # {"step": 3001 * 24, "lin_vel_x": (-0.75, 0.75), "ang_vel_z": (-1.0, 1.0)},
+                    # {"step": 6001 * 24, "lin_vel_x": (-1.0, 1.0), "ang_vel_z": (-1.5, 1.5)},
+                ]
+            },
+        ),
+        "wheel_vel_cost": CurriculumTermCfg(
+            func=set_wheel_vel_cost_weight,
+            params={
+                "weights": [
+                    (0, 0.0),
+                    (12001 * 24, -0.01),
                 ]
             },
         ),

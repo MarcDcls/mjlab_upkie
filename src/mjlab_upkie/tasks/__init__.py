@@ -10,7 +10,7 @@ from mjlab.tasks.velocity.rl.runner import VelocityOnPolicyRunner
 register_mjlab_task(
     task_id="Mjlab-Velocity-Upkie",
     env_cfg=upkie_velocity_env_cfg(),
-    play_env_cfg=upkie_velocity_env_cfg(play=True),
+    play_env_cfg=upkie_velocity_env_cfg(play=True, static=True),
     rl_cfg=UpkieRlCfg(max_iterations=60_000),
     runner_cls=VelocityOnPolicyRunner,
 )
