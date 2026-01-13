@@ -11,6 +11,7 @@
 import math
 from dataclasses import dataclass, field
 from copy import deepcopy
+from xml.dom.minidom import Entity
 import torch
 
 from mjlab.envs import mdp, ManagerBasedRlEnv, ManagerBasedRlEnvCfg
@@ -143,7 +144,7 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
                 lin_vel_x=(-1.0, 1.0),
                 lin_vel_y=(0.0, 0.0),
                 ang_vel_z=(-1.5, 1.5),
-            ), # Overridden in curriculum if not play mode
+            ),  # Overridden in curriculum if not play mode
         )
     }
 
@@ -229,16 +230,95 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
         error = torch.sum(torch.square(joints - targets), dim=1)
         return torch.exp(-error / std**2)
 
+    def static_wheel(
+        env: ManagerBasedRlEnv,
+        command_name: str,
+        asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+        vel_threshold: list[float] = [0.01, 0.01],
+    ) -> torch.Tensor:
+        """Penalization for wheel velocities when the command is near zero."""
+        asset: Entity = env.scene[asset_cfg.name]
+        command = env.command_manager.get_command(command_name)
+        assert command is not None, f"Command '{command_name}' not found."
+        zero_vel_envs = torch.where((abs(command[:, 0]) < vel_threshold[0]) & (abs(command[:, 2]) < vel_threshold[1]))[
+            0
+        ]
+        wheel_vel = asset.data.joint_vel[:, VEL_CTRL_JOINT_IDS]
+        error = torch.zeros(env.num_envs, device=env.device)
+        error[zero_vel_envs] = torch.sum(torch.square(wheel_vel[zero_vel_envs]), dim=1)
+        return error
+
+    def track_linear_velocity(
+        env: ManagerBasedRlEnv,
+        std: float,
+        zero_vel_std: float,
+        command_name: str,
+        asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+        vel_threshold: list[float] = [0.01, 0.01],
+    ) -> torch.Tensor:
+        """Reward for tracking the commanded base linear velocity.
+
+        The commanded z velocity is assumed to be zero.
+        """
+        asset: Entity = env.scene[asset_cfg.name]
+        command = env.command_manager.get_command(command_name)
+        assert command is not None, f"Command '{command_name}' not found."
+        actual = asset.data.root_link_lin_vel_b
+        xy_error = torch.sum(torch.square(command[:, :2] - actual[:, :2]), dim=1)
+        z_error = torch.square(actual[:, 2])
+        lin_vel_error = xy_error + z_error
+
+        stds = torch.full((env.num_envs,), std, device=env.device)
+        zero_vel_envs = torch.where((abs(command[:, 0]) < vel_threshold[0]) & (abs(command[:, 2]) < vel_threshold[1]))[
+            0
+        ]
+        stds[zero_vel_envs] = zero_vel_std
+
+        return torch.exp(-lin_vel_error / stds**2)
+
+    def track_angular_velocity(
+        env: ManagerBasedRlEnv,
+        std: float,
+        zero_vel_std: float,
+        command_name: str,
+        asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    ) -> torch.Tensor:
+        """Reward heading error for heading-controlled envs, angular velocity for others.
+
+        The commanded xy angular velocities are assumed to be zero.
+        """
+        asset: Entity = env.scene[asset_cfg.name]
+        command = env.command_manager.get_command(command_name)
+        assert command is not None, f"Command '{command_name}' not found."
+        actual = asset.data.root_link_ang_vel_b
+        z_error = torch.square(command[:, 2] - actual[:, 2])
+        xy_error = torch.sum(torch.square(actual[:, :2]), dim=1)
+        ang_vel_error = z_error + xy_error
+
+        stds = torch.full((env.num_envs,), std, device=env.device)
+        zero_vel_envs = torch.where((abs(command[:, 0]) < 0.01) & (abs(command[:, 2]) < 0.01))[0]
+        stds[zero_vel_envs] = zero_vel_std
+
+        return torch.exp(-ang_vel_error / stds**2)
+
     rewards = {
         "track_linear_velocity": RewardTermCfg(
-            func=mdp_vel.track_linear_velocity,
+            func=track_linear_velocity,
             weight=2.0,
-            params={"command_name": "twist", "std": math.sqrt(0.1)},
+            params={
+                "command_name": "twist",
+                "std": math.sqrt(0.1),
+                "zero_vel_std": math.sqrt(0.03),
+            },
         ),
         "track_angular_velocity": RewardTermCfg(
-            func=mdp_vel.track_angular_velocity,
+            func=track_angular_velocity,
             weight=2.0,
-            params={"command_name": "twist", "std": math.sqrt(0.1)},
+            params={
+                "command_name": "twist",
+                "std": math.sqrt(0.1),
+                "zero_vel_std": math.sqrt(0.03),
+            },
         ),
         "upright": RewardTermCfg(
             func=mdp_vel.flat_orientation,
@@ -256,16 +336,17 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
                 "target_pose": DEFAULT_POSE,
             },
         ),
-        "wheel_velocity_cost": RewardTermCfg(
-            func=mdp.joint_vel_l2,
-            weight=0.0,
-            params={
-                "asset_cfg": SceneEntityCfg(
-                    name="robot",
-                    joint_names=("left_wheel", "right_wheel"),
-                )
-            },
-        ),
+        # "static_wheel_cost": RewardTermCfg(
+        #     func=static_wheel,
+        #     weight=-0.1,
+        #     params={
+        #         "command_name": "twist",
+        #         "asset_cfg": SceneEntityCfg(
+        #             name="robot",
+        #             joint_names=("left_wheel", "right_wheel"),
+        #         )
+        #     },
+        # ),
         "action_rate_l2": RewardTermCfg(func=mdp.action_rate_l2, weight=-0.1),
     }
 
@@ -296,17 +377,6 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
             if env.common_step_counter >= step_threshold:
                 push_event_cfg.params["intensity"] = intensity
 
-    def set_wheel_vel_cost_weight(
-        env: ManagerBasedRlEnv,
-        env_ids: torch.Tensor,
-        weights: list[tuple[float, float]],
-    ) -> None:
-        """Set wheel velocity cost weight over time."""
-        reward_cfg = env.reward_manager.get_term_cfg("wheel_velocity_cost")
-        for step_threshold, weight in weights:
-            if env.common_step_counter >= step_threshold:
-                reward_cfg.weight = weight
-
     curriculum = {
         "command_vel": CurriculumTermCfg(
             func=mdp_vel.commands_vel,
@@ -314,18 +384,11 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
                 "command_name": "twist",
                 "velocity_stages": [
                     {"step": 0, "lin_vel_x": (-0.5, 0.5), "ang_vel_z": (-0.5, 0.5)},
+                    {"step": 10001 * 24, "lin_vel_x": (-0.75, 0.75), "ang_vel_z": (-1.0, 1.0)},
+                    {"step": 25001 * 24, "lin_vel_x": (-1.0, 1.0), "ang_vel_z": (-1.5, 1.5)},
                     # {"step": 3001 * 24, "lin_vel_x": (-0.75, 0.75), "ang_vel_z": (-1.0, 1.0)},
                     # {"step": 6001 * 24, "lin_vel_x": (-1.0, 1.0), "ang_vel_z": (-1.5, 1.5)},
-                ]
-            },
-        ),
-        "wheel_vel_cost": CurriculumTermCfg(
-            func=set_wheel_vel_cost_weight,
-            params={
-                "weights": [
-                    (0, 0.0),
-                    (12001 * 24, -0.01),
-                ]
+                ],
             },
         ),
         "push_intensity": CurriculumTermCfg(
@@ -333,9 +396,9 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
             params={
                 "intensities": [
                     (0, 0.0),
-                    (15001 * 24, 1.0),
-                    (25001 * 24, 2.0),
-                    (40001 * 24, 3.0),
+                    # (15001 * 24, 1.0),
+                    # (25001 * 24, 2.0),
+                    # (40001 * 24, 3.0),
                 ]
             },
         ),
@@ -433,6 +496,6 @@ class UpkieRlCfg(RslRlOnPolicyRunnerCfg):
     )
     wandb_project: str = "mjlab_upkie"
     experiment_name: str = "upkie_velocity"
-    save_interval: int = 5000
+    save_interval: int = 500
     num_steps_per_env: int = 24
     max_iterations: int = 60_000
