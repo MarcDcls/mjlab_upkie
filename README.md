@@ -101,19 +101,14 @@ It also features openings on the front and back of the robot's body for better a
 
 The model files can be found at `src/mjlab_upkie/robot/upkie/`. They were generated using [onshape-to-robot](https://onshape-to-robot.readthedocs.io/en/latest/)
 
-<table align="center">
-  <tr>
-    <td width="12.5%"></td>
-    <td width="35%" align="center">
-      <img src="https://github.com/user-attachments/assets/e0ea3325-aceb-4bb1-b783-3377620db886" width="100%">
-    </td>
-    <td width="5%"></td>
-    <td width="35%" align="center">
-      <img src="https://github.com/user-attachments/assets/3d427eff-d055-4e68-802a-5598f0463fc3" width="100%">
-    </td>
-    <td width="12.5%"></td>
-  </tr>
-</table>
+<p>
+  <img src="https://github.com/user-attachments/assets/e0ea3325-aceb-4bb1-b783-3377620db886"
+       alt="CAD model" width="48%" style="float:left; margin-right:2%;">
+  <img src="https://github.com/user-attachments/assets/3d427eff-d055-4e68-802a-5598f0463fc3"
+       alt="Real robot" width="48%" style="float:right; margin-left:2%;">
+</p>
+
+<p style="clear: both;"></p>
 
 ## Real robot
 
