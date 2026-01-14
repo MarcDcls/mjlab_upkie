@@ -79,7 +79,7 @@ VIEWER_CONFIG = ViewerConfig(
     asset_name="robot",
     body_name="trunk",
     distance=3.0,
-    elevation=10.0,
+    elevation=-15.0,
     azimuth=90.0,
 )
 
