@@ -1,16 +1,16 @@
 # MjLab Upkie
 
+<img src="https://github.com/user-attachments/assets/f6293fbc-5c59-4e56-bc7f-0ee930503f11" align="right" height="300px">
 
-<img src="https://github.com/user-attachments/assets/314c3cbd-bc42-4f79-831d-322b2074bf35" align="right" height="300px" margin="50px">
+This repository contains simulation environments for the [Upkie](https://github.com/upkie/upkie) robot. 
+They are built using the [MjLab](https://github.com/mujocolab/mjlab) framework.
 
-This repository contains simulation environments for the [Upkie robot](https://github.com/upkie/upkie) 
-built on the [MjLab](https://github.com/mujocolab/mjlab) framework.
-
-I thanks the MjLab team for their great work on this framework, as well as 
-Stéphane Caron and the whole Upkie team for the robot design.
+I thank the MjLab team for their great work on this framework, as well as 
+Stéphane Caron and the whole Upkie team for the robot original design.
 
 Currently a velocity control task is implemented, allowing the robot to follow given 
-target linear and angular velocities, while being able to resist external disturbances (see video on the right).
+target linear and angular velocities, while being able to resist external disturbances. 
+This task is presented in the video on the right. 
 The implementation of a standup task is also planned for the future. 
 
 The robot model used in this repository is based on my own design of the Upkie robot. 
@@ -28,7 +28,7 @@ uv sync
 
 ## Using a velocity agent within its Mjlab environment (GPU required)
 
-You can use a pre-trained agent directly in its environment, where random velocity commands are given to the robot at regular intervals. 
+You can use a pre-trained agent directly in its environment, as shown in the video above, where random velocity commands are given to the robot at regular intervals. 
 Linear velocity commands are represented by a blue arrow, while angular velocity commands are represented by a green vertical one.
 
 To play with the velocity agent, use the following command:
@@ -79,7 +79,6 @@ uv run play Mjlab-Velocity-Upkie --checkpoint-file [path to your checkpoint]
 ```
 
 Here, [path to your checkpoint] should be replaced with the actual path to the checkpoint file, which is typically located at `logs/rsl_rl/upkie_velocity/[date]/model_[number].pt`.
-
 
 ## Debug
 
