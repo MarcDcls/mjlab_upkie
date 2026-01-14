@@ -93,16 +93,16 @@ which is typically located at `logs/rsl_rl/upkie_velocity/[date]/model_[number].
 ## Model
 
 The Upkie model used in this repository is based on my own design of the Upkie robot. 
-It has been made using Onshape CAD software and is available [here]
-(https://cad.onshape.com/documents/626c0feba56391e940274c5a/v/528b63837812ab4634b4ea70/e/f40baedc39efd40637593503?renderMode=0&uiState=69651b27fe1457b05503e479).
+It has been made using Onshape CAD software and is available [here](https://cad.onshape.com/documents/626c0feba56391e940274c5a/v/528b63837812ab4634b4ea70/e/f40baedc39efd40637593503?renderMode=0&uiState=69651b27fe1457b05503e479).
 
 It is mainly inspired by the original Upkie design, but features some differences, 
 such as the use of a LiPo battery for power supply, a different IMU placement, and a slightly modified leg design. 
 It also features openings on the front and back of the robot's body for better access to internal components.
 
-The model files can be found at `src/mjlab_upkie/robot/upkie/`. They were generated using [onshape-to-robot]
-(https://onshape-to-robot.readthedocs.io/en/latest/)
+The model files can be found at `src/mjlab_upkie/robot/upkie/`. They were generated using [onshape-to-robot](https://onshape-to-robot.readthedocs.io/en/latest/)
 
-TODO: add pictures
+<img width="48%" alt="CAD model" src="https://github.com/user-attachments/assets/e0ea3325-aceb-4bb1-b783-3377620db886" align="left"/>
+<img width="48%" alt="Real robot" src="https://github.com/user-attachments/assets/3d427eff-d055-4e68-802a-5598f0463fc3" align="right"/>
+
 
 
