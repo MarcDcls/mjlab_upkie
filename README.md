@@ -61,10 +61,19 @@ then right-clicking and dragging while holding the left-ctrl key.
 
 ## Training your own agent
 
-You can also modify the environment to train your own agent. 
-To do so, you can modify the environment configurations in `src/mjlab_upkie/tasks/upkie_velocity_env_cfg.py`.
+You can also modify the environments to train your own agent. 
+To do so, you can modify the environment configurations at `src/mjlab_upkie/tasks/*_env_cfg.py`.
+In the following, we will suppose you want to train the velocity agent.
 
-To train an agent for the velocity control task, you can then use the following command:
+To test the environment before training, you can use the following commands to play with
+a zero or random agent:
+
+```
+uv run play Mjlab-Velocity-Upkie --agent zero
+uv run play Mjlab-Velocity-Upkie --agent random
+```
+
+You can then start the training process by using the following command:
 
 ```
 uv run train Mjlab-Velocity-Upkie --env.scene.num-envs 2048
@@ -78,13 +87,22 @@ as previously explained using the following commands:
 uv run play Mjlab-Velocity-Upkie --checkpoint-file [path to your checkpoint]
 ```
 
-Here, [path to your checkpoint] should be replaced with the actual path to the checkpoint file, which is typically located at `logs/rsl_rl/upkie_velocity/[date]/model_[number].pt`.
+Here, [path to your checkpoint] should be replaced with the actual path to the checkpoint file, 
+which is typically located at `logs/rsl_rl/upkie_velocity/[date]/model_[number].pt`.
 
-## Debug
+## Model
 
-To debug an environment:
+The Upkie model used in this repository is based on my own design of the Upkie robot. 
+It has been made using Onshape CAD software and is available [here]
+(https://cad.onshape.com/documents/626c0feba56391e940274c5a/v/528b63837812ab4634b4ea70/e/f40baedc39efd40637593503?renderMode=0&uiState=69651b27fe1457b05503e479).
 
-```
-uv run play Mjlab-Velocity-Upkie --agent zero
-uv run play Mjlab-Velocity-Upkie --agent random
-```
+It is mainly inspired by the original Upkie design, but features some differences, 
+such as the use of a LiPo battery for power supply, a different IMU placement, and a slightly modified leg design. 
+It also features openings on the front and back of the robot's body for better access to internal components.
+
+The model files can be found at `src/mjlab_upkie/robot/upkie/`. They were generated using [onshape-to-robot]
+(https://onshape-to-robot.readthedocs.io/en/latest/)
+
+TODO: add pictures
+
+
