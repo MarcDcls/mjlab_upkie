@@ -57,6 +57,8 @@ In this configuration, the commanded velocities can be set via keyboard inputs:
 As before, you can push the robot by double clicking on its trunk, 
 then right-clicking and dragging while holding the left-ctrl key.
 
+![mjlab_upkie_sim](https://github.com/user-attachments/assets/99e632fa-ecf0-4a71-a3ba-31808d88298f)
+
 ## Training your own agent
 
 You can also modify the environment to train your own agent. 
