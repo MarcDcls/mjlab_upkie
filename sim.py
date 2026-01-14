@@ -24,12 +24,17 @@ from mjlab_upkie.robot.upkie_constants import (
     RIGHT_WHEEL,    
 )
 
-robot_path = "src/mjlab_upkie/robot/upkie/scene.xml"
-wheel_action_scale = 100.0
+robot_path: str = "src/mjlab_upkie/robot/upkie/scene.xml"
+wheel_action_scale: float = 100.0
 
-command = [0.0, 0.0, 0.0]  # global command variable
+# Global command variable
+command: list[float] = [0.0, 0.0, 0.0]  
+
+# Zero velocity management
+world_target: list[float] = [0.0, 0.0, 0.0]
 
 def reset_robot(model, data, yaw=0.0):
+    """Reset robot to default pose with specified yaw orientation."""
 
     # Set initial joint positions
     data.qpos = np.array([0.0] * model.nq)
@@ -59,6 +64,7 @@ def reset_robot(model, data, yaw=0.0):
 
 
 def get_inputs(model, data, last_action, command):
+    """Prepare observation dictionary for ONNX model inference."""
     obs = []
 
     # Joint positions
@@ -102,6 +108,7 @@ def get_inputs(model, data, last_action, command):
 def keyboard_callback(keycode):
     """Handle keyboard input for command control."""
     global command
+    global world_target
     
     if keycode == 265:  # Up arrow
         command[0] = min(command[0] + 0.25, 1.0)
@@ -118,6 +125,58 @@ def keyboard_callback(keycode):
     elif keycode == 32:  # Space bar - reset commands
         command = [0.0, 0.0, 0.0]
         print("Commands reset")
+
+    if command[0] == 0.0 and command[2] == 0.0:
+        set_world_target()
+
+
+def set_world_target():
+    """Set the target position in the world frame when stopping."""
+    global world_target
+
+    yaw = np.arctan2(
+        2.0 * (data.qpos[3] * data.qpos[6]),
+        1.0 - 2.0 * (data.qpos[5] ** 2 + data.qpos[6] ** 2),
+    )
+    x = data.qpos[0]
+    y = data.qpos[1]
+    
+    world_target[0] = x
+    world_target[1] = y
+    world_target[2] = yaw
+
+
+def get_corrected_command(command, kp_pos=3.0, kv_pos=3.0, kp_yaw=1.0, kv_yaw=1.0):
+    """Return command with a proportional controller on position error when stopped."""
+    global world_target
+
+    if command[0] != 0.0 or command[2] != 0.0:
+        return command
+    
+    # Position error in world frame
+    ex = world_target[0] - data.qpos[0]
+    ey = world_target[1] - data.qpos[1]
+    eyaw = world_target[2] - np.arctan2(
+        2.0 * (data.qpos[3] * data.qpos[6]),
+        1.0 - 2.0 * (data.qpos[5] ** 2 + data.qpos[6] ** 2),
+    )
+
+    # Rotate error to robot frame
+    cy = np.cos(-world_target[2])
+    sy = np.sin(-world_target[2])
+    ex_r = cy * ex - sy * ey
+    ey_r = sy * ex + cy * ey
+
+    corrected_command = [
+        kp_pos * ex_r,
+        0.0,
+        kp_yaw * eyaw,
+    ]
+
+    print(f"Corrected command: lin_vel_x={corrected_command[0]:.2f}, ang_vel_z={corrected_command[2]:.2f}")
+    print(f"Position error: ex={ex:.2f}, ey={ey:.2f}, eyaw={eyaw:.2f}")
+    print("World target:", world_target)
+    return corrected_command
 
 
 if __name__ == "__main__":
@@ -162,7 +221,7 @@ if __name__ == "__main__":
             if step_counter % inf_period == 0:
 
                 # Get observation and run inference
-                inputs = get_inputs(model, data, last_action, command)
+                inputs = get_inputs(model, data, last_action, get_corrected_command(command))
                 outputs = ort_sess.run(None, inputs)
                 action = outputs[0][0]
                 last_action = action.tolist()
