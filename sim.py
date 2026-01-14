@@ -35,6 +35,8 @@ world_target: list[float] = [0.0, 0.0, 0.0]
 
 def reset_robot(model, data, yaw=0.0):
     """Reset robot to default pose with specified yaw orientation."""
+    global world_target
+    world_target = [0.0, 0.0, yaw]
 
     # Set initial joint positions
     data.qpos = np.array([0.0] * model.nq)
@@ -105,32 +107,31 @@ def get_inputs(model, data, last_action, command):
     }
 
 
-def keyboard_callback(keycode):
+def keyboard_callback(keycode, data):
     """Handle keyboard input for command control."""
     global command
     global world_target
     
+    previous_command = command.copy()
     if keycode == 265:  # Up arrow
         command[0] = min(command[0] + 0.25, 1.0)
-        print(f"Linear velocity: {command[0]:.1f}")
     elif keycode == 264:  # Down arrow
         command[0] = max(command[0] - 0.25, -1.0)
-        print(f"Linear velocity: {command[0]:.1f}")
     elif keycode == 263:  # Left arrow
         command[2] = min(command[2] + 0.5, 1.5)
-        print(f"Angular velocity: {command[2]:.1f}")
     elif keycode == 262:  # Right arrow
         command[2] = max(command[2] - 0.5, -1.5)
-        print(f"Angular velocity: {command[2]:.1f}")
     elif keycode == 32:  # Space bar - reset commands
         command = [0.0, 0.0, 0.0]
-        print("Commands reset")
+
+    if command != previous_command:
+        print(f"Linear velocity: {command[0]:.2f} [m/s]  |  Angular velocity: {command[2]:.2f} [rad/s]")
 
     if command[0] == 0.0 and command[2] == 0.0:
-        set_world_target()
+        set_world_target(data)
 
 
-def set_world_target():
+def set_world_target(data):
     """Set the target position in the world frame when stopping."""
     global world_target
 
@@ -146,36 +147,34 @@ def set_world_target():
     world_target[2] = yaw
 
 
-def get_corrected_command(command, kp_pos=3.0, kv_pos=3.0, kp_yaw=1.0, kv_yaw=1.0):
+def get_corrected_command(command, data, kp_pos=3.0, kv_pos=1.0, kp_yaw=1.0, kv_yaw=0.1):
     """Return command with a proportional controller on position error when stopped."""
     global world_target
 
     if command[0] != 0.0 or command[2] != 0.0:
         return command
-    
-    # Position error in world frame
-    ex = world_target[0] - data.qpos[0]
-    ey = world_target[1] - data.qpos[1]
-    eyaw = world_target[2] - np.arctan2(
+        
+    world_yaw = np.arctan2(
         2.0 * (data.qpos[3] * data.qpos[6]),
         1.0 - 2.0 * (data.qpos[5] ** 2 + data.qpos[6] ** 2),
     )
 
-    # Rotate error to robot frame
-    cy = np.cos(-world_target[2])
-    sy = np.sin(-world_target[2])
-    ex_r = cy * ex - sy * ey
-    ey_r = sy * ex + cy * ey
+    # X error in robot frame
+    ex_w = world_target[0] - data.qpos[0]
+    ey_w = world_target[1] - data.qpos[1]
+    ex_r = ex_w * np.cos(world_yaw) + ey_w * np.sin(world_yaw)
 
-    corrected_command = [
-        kp_pos * ex_r,
-        0.0,
-        kp_yaw * eyaw,
-    ]
+    # Yaw error (wrapped to [-pi, pi]) in robot frame
+    eyaw = world_target[2] - world_yaw
+    eyaw = (eyaw + np.pi) % (2 * np.pi) - np.pi
 
-    print(f"Corrected command: lin_vel_x={corrected_command[0]:.2f}, ang_vel_z={corrected_command[2]:.2f}")
-    print(f"Position error: ex={ex:.2f}, ey={ey:.2f}, eyaw={eyaw:.2f}")
-    print("World target:", world_target)
+    # PD control
+    vx_r = data.qvel[0] * np.cos(world_yaw) + data.qvel[1] * np.sin(world_yaw)
+    wz_r = data.qvel[5]
+    vx_cmd = np.clip(kp_pos * ex_r - kv_pos * vx_r, -1.0, 1.0)
+    wz_cmd = np.clip(kp_yaw * eyaw - kv_yaw * wz_r, -1.5, 1.5)
+    corrected_command = [vx_cmd, 0.0, wz_cmd]
+
     return corrected_command
 
 
@@ -212,8 +211,7 @@ if __name__ == "__main__":
     print("SPACE : Reset commands")
     print("========================\n")
 
-    # Launch viewer with key callback
-    with mujoco.viewer.launch_passive(model, data, key_callback=keyboard_callback) as viewer:
+    with mujoco.viewer.launch_passive(model, data, key_callback=lambda k: keyboard_callback(k, data)) as viewer:
         while viewer.is_running():
             step_start = time.time()      
 
@@ -221,7 +219,7 @@ if __name__ == "__main__":
             if step_counter % inf_period == 0:
 
                 # Get observation and run inference
-                inputs = get_inputs(model, data, last_action, get_corrected_command(command))
+                inputs = get_inputs(model, data, last_action, get_corrected_command(command, data))
                 outputs = ort_sess.run(None, inputs)
                 action = outputs[0][0]
                 last_action = action.tolist()
