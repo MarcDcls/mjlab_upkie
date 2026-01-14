@@ -12,6 +12,7 @@ uv.lock
 .venv
 
 # Logs and databases
+video
 wandb
 logs
 agents
