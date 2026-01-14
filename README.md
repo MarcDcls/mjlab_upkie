@@ -101,8 +101,26 @@ It also features openings on the front and back of the robot's body for better a
 
 The model files can be found at `src/mjlab_upkie/robot/upkie/`. They were generated using [onshape-to-robot](https://onshape-to-robot.readthedocs.io/en/latest/)
 
-<img width="48%" alt="CAD model" src="https://github.com/user-attachments/assets/e0ea3325-aceb-4bb1-b783-3377620db886" align="left"/>
-<img width="48%" alt="Real robot" src="https://github.com/user-attachments/assets/3d427eff-d055-4e68-802a-5598f0463fc3" align="right"/>
+<table align="center">
+  <tr>
+    <td width="12.5%"></td>
+    <td width="35%" align="center">
+      <img src="https://github.com/user-attachments/assets/e0ea3325-aceb-4bb1-b783-3377620db886" width="100%">
+    </td>
+    <td width="5%"></td>
+    <td width="35%" align="center">
+      <img src="https://github.com/user-attachments/assets/3d427eff-d055-4e68-802a-5598f0463fc3" width="100%">
+    </td>
+    <td width="12.5%"></td>
+  </tr>
+</table>
 
+## Real robot
 
+The real platform has been built with success, as shown on the video below. 
+It displays the robot balaning using the mpc balancer designed by Stéphane Caron (cf. [here](https://github.com/upkie/upkie)). 
+The deployment of the velocity control task on the real robot is planned for the future, stay tuned!
 
+<p align="center">
+  <img width="40%" alt="MPC balancer robot" src="https://github.com/user-attachments/assets/c495bf52-3a3a-4a99-ba1d-a8c2d6c82bff"/>
+</p>
