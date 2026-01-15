@@ -1,6 +1,6 @@
 # MjLab Upkie
 
-<img src="https://github.com/user-attachments/assets/f6293fbc-5c59-4e56-bc7f-0ee930503f11" align="right" height="300px">
+<img src="https://github.com/user-attachments/assets/f6293fbc-5c59-4e56-bc7f-0ee930503f11" align="right" height="350px">
 
 This repository contains simulation environments for the [Upkie](https://github.com/upkie/upkie) robot. 
 They are built using the [MjLab](https://github.com/mujocolab/mjlab) framework.
@@ -10,7 +10,8 @@ Stéphane Caron and the whole Upkie team for the robot original design.
 
 Currently a velocity control task is implemented, allowing the robot to follow given 
 target linear and angular velocities, while being able to resist external disturbances. 
-This task is presented in the video on the right. 
+The video on the right demonstrates an agent trained on this task tracking random 
+velocity commands and maintaining stability despite manual pushes.
 The implementation of a standup task is also planned for the future. 
 
 The robot model used in this repository is based on my own design of the Upkie robot. 
