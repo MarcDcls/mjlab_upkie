@@ -6,7 +6,7 @@
 
 #     http://www.apache.org/licenses/LICENSE-2.0
 
-"""Upkie velocity task environment configuration."""
+"""Upkie standup task environment configuration."""
 
 import math
 from dataclasses import dataclass, field
@@ -63,8 +63,8 @@ SCENE_CFG = SceneCfg(
 )
 
 
-def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerBasedRlEnvCfg:
-    """Create Upkie velocity environment configuration."""
+def upkie_standup_env_cfg(play: bool = False, static: bool = False) -> ManagerBasedRlEnvCfg:
+    """Create Upkie standup environment configuration."""
 
     ################# Observations #################
 
@@ -381,7 +381,7 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
 
 
 @dataclass
-class UpkieVelRlCfg(RslRlOnPolicyRunnerCfg):
+class UpkieStandupRlCfg(RslRlOnPolicyRunnerCfg):
     policy: RslRlPpoActorCriticCfg = field(
         default_factory=lambda: RslRlPpoActorCriticCfg(
             init_noise_std=1.0,
@@ -408,8 +408,8 @@ class UpkieVelRlCfg(RslRlOnPolicyRunnerCfg):
             max_grad_norm=1.0,
         )
     )
-    wandb_project: str = "mjlab_upkie"
-    experiment_name: str = "upkie_velocity"
+    wandb_project: str = "mjlab_upkie_standup"
+    experiment_name: str = "upkie_standup"
     save_interval: int = 5000
     num_steps_per_env: int = 24
     max_iterations: int = 60_000
