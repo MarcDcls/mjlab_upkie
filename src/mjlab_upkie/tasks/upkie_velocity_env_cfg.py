@@ -171,7 +171,7 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
         )
         vel_w[:, 3:] = quat_apply_inverse(quat_w, vel_w[:, 3:])
         asset.write_root_link_velocity_to_sim(vel_w, env_ids=env_ids)
-œ
+        
     events = {
         "reset_base": EventTermCfg(
             func=mdp.reset_root_state_uniform,
