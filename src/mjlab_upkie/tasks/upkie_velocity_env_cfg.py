@@ -11,7 +11,6 @@
 import math
 from dataclasses import dataclass, field
 from copy import deepcopy
-from xml.dom.minidom import Entity
 import torch
 
 from mjlab.envs import mdp, ManagerBasedRlEnv, ManagerBasedRlEnvCfg
@@ -29,8 +28,6 @@ from mjlab.utils.noise import UniformNoiseCfg as Unoise
 from mjlab.scene import SceneCfg
 from mjlab.terrains import TerrainImporterCfg
 from mjlab.terrains.config import ROUGH_TERRAINS_CFG
-from mjlab.sim import MujocoCfg, SimulationCfg
-from mjlab.viewer import ViewerConfig
 from mjlab.managers.scene_entity_config import SceneEntityCfg
 from mjlab.rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, RslRlPpoAlgorithmCfg
 from mjlab.utils.lab_api.math import sample_uniform, quat_apply_inverse
