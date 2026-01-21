@@ -198,8 +198,8 @@ if __name__ == "__main__":
     model: mujoco.MjModel = mujoco.MjModel.from_xml_path(robot_path)
     data: mujoco.MjData = mujoco.MjData(model)
 
-    model.opt.timestep = 0.001  # 1000 Hz simulation
-    inf_period = 20 # 50 Hz inference
+    model.opt.timestep = 0.005  # 200 Hz simulation
+    inf_period = 4  # 50 Hz inference
     step_counter = 0
 
     reset_robot(model, data, yaw=random.uniform(0, 2*np.pi))
