@@ -2,7 +2,7 @@
 
 <img src="https://github.com/user-attachments/assets/f6293fbc-5c59-4e56-bc7f-0ee930503f11" align="right" height="350px">
 
-This repository contains simulation environments for the [Upkie](https://github.com/upkie/upkie) robot. 
+This repository contains Reinforcement Learning (RL) environments for the [Upkie](https://github.com/upkie/upkie) robot. 
 They are built using the [MjLab](https://github.com/mujocolab/mjlab) framework.
 
 I thank the MjLab team for their great work on this framework, as well as 
