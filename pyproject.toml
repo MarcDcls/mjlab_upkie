@@ -6,7 +6,7 @@ build-backend = "uv_build"
 name = "mjlab-upkie"
 version = "0.1.0"
 license = "Apache-2.0"
-description = "Upkie example"
+description = "Reinforcement learning environments for the Upkie robot based on MjLab."
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
