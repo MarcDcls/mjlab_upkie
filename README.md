@@ -1,5 +1,7 @@
 # MjLab Upkie
 
+[![DOI](https://zenodo.org/badge/1090191371.svg)](https://doi.org/10.5281/zenodo.18470777)
+
 <img src="https://github.com/user-attachments/assets/f6293fbc-5c59-4e56-bc7f-0ee930503f11" align="right" height="350px">
 
 This repository contains Reinforcement Learning (RL) environments for the [Upkie](https://github.com/upkie/upkie) robot. 
