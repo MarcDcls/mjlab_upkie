@@ -128,7 +128,7 @@ The deployment of the velocity control task on the real robot is planned for the
 
 To cite this repository in publications:
 ```bibtex
-@software{Duclusaud_Mjlab-Upkie_Reinforcement_learning_2026,
+@software{mduclusaud-mjlab-upkie,
     author = {Duclusaud, Marc},
     doi = {10.5281/zenodo.18470777},
     month = feb,
