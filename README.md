@@ -123,3 +123,18 @@ The deployment of the velocity control task on the real robot is planned for the
 <p align="center">
   <img width="40%" alt="MPC balancer robot" src="https://github.com/user-attachments/assets/c495bf52-3a3a-4a99-ba1d-a8c2d6c82bff"/>
 </p>
+
+## Citation
+
+To cite this repository in publications:
+```bibtex
+@software{Duclusaud_Mjlab-Upkie_Reinforcement_learning_2026,
+    author = {Duclusaud, Marc},
+    doi = {10.5281/zenodo.18470777},
+    month = feb,
+    title = {{Mjlab-Upkie: Reinforcement learning environments for a biped on wheels}},
+    url = {https://github.com/MarcDcls/mjlab_upkie},
+    version = {1.0.1},
+    year = {2026}
+}
+```

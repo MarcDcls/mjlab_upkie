@@ -6,6 +6,6 @@ authors:
     orcid: "https://orcid.org/0009-0006-9206-9188"
 title: "Mjlab-Upkie: Reinforcement learning environments for a biped on wheels"
 version: 1.0.0
-doi: 10.5281/zenodo.XXXXX # TODO: replace with actual DOI
+doi: 10.5281/zenodo.18470777
 date-released: 2026-02-03
 url: "https://github.com/MarcDcls/mjlab_upkie"
