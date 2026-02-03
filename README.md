@@ -126,7 +126,7 @@ The deployment of the velocity control task on the real robot is planned for the
 
 ## Citation
 
-To cite this repository in publications:
+To cite this repository in your publications:
 ```bibtex
 @software{mduclusaud-mjlab-upkie,
     author = {Duclusaud, Marc},
