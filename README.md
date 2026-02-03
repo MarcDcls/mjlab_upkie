@@ -1,5 +1,6 @@
 # MjLab Upkie
 
+[![License: Apache-2.0](https://img.shields.io/badge/Software-Apache--2.0-yellow.svg)](LICENSE)
 [![DOI](https://zenodo.org/badge/1090191371.svg)](https://doi.org/10.5281/zenodo.18470777)
 
 <img src="https://github.com/user-attachments/assets/f6293fbc-5c59-4e56-bc7f-0ee930503f11" align="right" height="350px">
