@@ -223,13 +223,20 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
 
     #################### Rewards ###################
 
-    def pose_reward(env: ManagerBasedRlEnv, std: float, target_pose) -> torch.Tensor:
+    def sum_pose_reward(env: ManagerBasedRlEnv, std: float, target_pose) -> torch.Tensor:
+        """Reward aiming for the target pose."""
+        targets = torch.tensor([target_pose[name] for name in POS_CTRL_JOINT_NAMES], device=env.device)
+        joints = env.sim.data.qpos[:, POS_CTRL_JOINT_IDS + 7]
+        error = torch.sum(torch.square(joints - targets), dim=1)
+        return torch.exp(-error / std**2)
+
+    def mean_pose_reward(env: ManagerBasedRlEnv, std: float, target_pose) -> torch.Tensor:
         """Reward aiming for the target pose."""
         targets = torch.tensor([target_pose[name] for name in POS_CTRL_JOINT_NAMES], device=env.device)
         joints = env.sim.data.qpos[:, POS_CTRL_JOINT_IDS + 7]
         squared_error = torch.square(joints - targets)
         return torch.exp(-torch.mean(squared_error / std**2))
-
+    
     rewards = {
         "track_linear_velocity": RewardTermCfg(
             func=mdp_vel.track_linear_velocity,
@@ -256,7 +263,7 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
             },
         ),
         "pose": RewardTermCfg(
-            func=pose_reward,
+            func=sum_pose_reward,
             weight=0.5,
             params={
                 "std": math.sqrt(0.5),
