@@ -227,8 +227,8 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
         """Reward aiming for the target pose."""
         targets = torch.tensor([target_pose[name] for name in POS_CTRL_JOINT_NAMES], device=env.device)
         joints = env.sim.data.qpos[:, POS_CTRL_JOINT_IDS + 7]
-        error = torch.sum(torch.square(joints - targets), dim=1)
-        return torch.exp(-error / std**2)
+        squared_error = torch.square(joints - targets)
+        return torch.exp(-torch.mean(squared_error / std**2))
 
     rewards = {
         "track_linear_velocity": RewardTermCfg(
