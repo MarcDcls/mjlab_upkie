@@ -68,6 +68,12 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
 
     ################# Observations #################
 
+    def get_orientation_quat(env: ManagerBasedRlEnv) -> torch.Tensor:
+        """Get the robot's trunk orientation as a quaternion with non-negative w."""
+        quat = env.sim.data.qpos[:, 3:7]
+        quat = torch.where(quat[:, 0] < 0, -quat, quat)
+        return quat
+
     policy_terms = {
         "joint_pos": ObservationTermCfg(
             func=lambda env: env.sim.data.qpos[:, POS_CTRL_JOINT_IDS + 7],
@@ -78,7 +84,7 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
             noise=Unoise(n_min=-1.5, n_max=1.5),
         ),
         "trunk_imu": ObservationTermCfg(
-            func=lambda env: env.sim.data.qpos[:, 3:7],
+            func=get_orientation_quat,
             noise=Unoise(n_min=-0.05, n_max=0.05),
         ),
         "trunk_gyro": ObservationTermCfg(

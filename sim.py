@@ -80,7 +80,10 @@ def get_inputs(model, data, last_action, command):
     obs.append(data.qvel[6 + RIGHT_WHEEL])
 
     # IMU readings (quaternion)
-    obs.extend(data.qpos[3:7])
+    quat = data.qpos[3:7] 
+    if quat[0] < 0: 
+        quat = -quat
+    obs.extend(quat)
 
     # Gyro readings
     obs.extend(data.qvel[3:6])
@@ -92,12 +95,12 @@ def get_inputs(model, data, last_action, command):
     obs.extend(command)
 
     # Debug
-    # print("joint positions:", obs[0:4])
-    # print("wheel velocities:", obs[4:6])
-    # print("IMU quaternion:", obs[6:10])
-    # print("gyro readings:", obs[10:13])
-    # print("last action:", obs[13:19])
-    # print("command:", obs[19:22])
+    # print(f"joint positions: {np.array(obs[0:4]).round(2)}")
+    # print(f"wheel velocities: {np.array(obs[4:6]).round(2)}")
+    # print(f"IMU quaternion: {np.array(obs[6:10]).round(2)}")
+    # print(f"gyro readings: {np.array(obs[10:13]).round(2)}")
+    # print(f"last action: {np.array(obs[13:19]).round(2)}")
+    # print(f"command: {np.array(obs[19:22]).round(2)}")
     # print("------------------------")
 
     return {
