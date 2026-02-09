@@ -30,6 +30,13 @@ wheel_action_scale: float = 100.0
 # Global command variable
 command: list[float] = [0.0, 0.0, 0.0]  
 
+# Sensor delay buffers
+buffer_size = 2
+joint_pos_buffer = [[0.0] * 4] * buffer_size 
+joint_vel_buffer = [[0.0] * 2] * buffer_size
+imu_buffer = [[0.0] * 4] * buffer_size
+gyro_buffer = [[0.0] * 3] * buffer_size
+
 # Zero velocity management
 world_target: list[float] = [0.0, 0.0, 0.0]
 
@@ -65,28 +72,63 @@ def reset_robot(model, data, yaw=0.0):
     mujoco.mj_forward(model, data)
 
 
-def get_inputs(model, data, last_action, command):
+def get_inputs(model, data, last_action, command, use_delay=False):
     """Prepare observation dictionary for ONNX model inference."""
     obs = []
 
     # Joint positions
-    obs.append(data.qpos[7 + LEFT_HIP])
-    obs.append(data.qpos[7 + LEFT_KNEE])
-    obs.append(data.qpos[7 + RIGHT_HIP])
-    obs.append(data.qpos[7 + RIGHT_KNEE])
+    joint_pos = [
+        data.qpos[7 + LEFT_HIP],
+        data.qpos[7 + LEFT_KNEE],
+        data.qpos[7 + RIGHT_HIP],
+        data.qpos[7 + RIGHT_KNEE],
+    ]
+
+    if use_delay:    
+        delayed_joint_pos = joint_pos_buffer[0]
+        joint_pos_buffer.append(joint_pos)
+        joint_pos_buffer[:] = joint_pos_buffer[-buffer_size:]
+        obs.extend(delayed_joint_pos)
+    else:
+        obs.extend(joint_pos)
 
     # Wheel velocities
-    obs.append(data.qvel[6 + LEFT_WHEEL])
-    obs.append(data.qvel[6 + RIGHT_WHEEL])
+    wheel_vel = [
+        data.qvel[6 + LEFT_WHEEL],
+        data.qvel[6 + RIGHT_WHEEL],
+    ]
 
+    if use_delay:
+        delayed_wheel_vel = joint_vel_buffer[0]
+        joint_vel_buffer.append(wheel_vel)
+        joint_vel_buffer[:] = joint_vel_buffer[-buffer_size:]
+        obs.extend(delayed_wheel_vel)
+    else:
+        obs.extend(wheel_vel)
+    
     # IMU readings (quaternion)
     quat = data.qpos[3:7] 
     if quat[0] < 0: 
         quat = -quat
-    obs.extend(quat)
-
+    
+    if use_delay:
+        delayed_quat = imu_buffer[0]
+        imu_buffer.append(quat)
+        imu_buffer[:] = imu_buffer[-buffer_size:]
+        obs.extend(delayed_quat)
+    else:
+        obs.extend(quat)    
+    
     # Gyro readings
-    obs.extend(data.qvel[3:6])
+    gyro = data.qvel[3:6]
+
+    if use_delay:
+        delayed_gyro = gyro_buffer[0]
+        gyro_buffer.append(gyro)
+        gyro_buffer[:] = gyro_buffer[-buffer_size:]
+        obs.extend(delayed_gyro)
+    else:
+        obs.extend(gyro)
 
     # Last action
     obs.extend(last_action)
@@ -95,6 +137,11 @@ def get_inputs(model, data, last_action, command):
     obs.extend(command)
 
     # Debug
+    # wheel_rad_per_s = np.array(obs[4:6])
+    # wheel_rot_per_s = wheel_rad_per_s / (2 * np.pi)
+    # wheel_dist_per_s = wheel_rot_per_s * (0.112 * np.pi)
+    # print(f"wheel linear velocities: {wheel_dist_per_s.round(2)} [m/s]")
+
     # print(f"joint positions: {np.array(obs[0:4]).round(2)}")
     # print(f"wheel velocities: {np.array(obs[4:6]).round(2)}")
     # print(f"IMU quaternion: {np.array(obs[6:10]).round(2)}")
@@ -187,6 +234,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--onnx-model-path", type=str, default="logs/rsl_rl/upkie_velocity/bests/default.onnx")
+    parser.add_argument("-d", "--delay", action="store_true", help="Whether to use delayed observations to simulate sensor latency.")
     args = parser.parse_args()
 
     onnx_model = onnx.load(args.onnx_model_path)
@@ -222,7 +270,7 @@ if __name__ == "__main__":
             if step_counter % inf_period == 0:
 
                 # Get observation and run inference
-                inputs = get_inputs(model, data, last_action, get_corrected_command(command, data))
+                inputs = get_inputs(model, data, last_action, get_corrected_command(command, data), use_delay=args.delay)
                 outputs = ort_sess.run(None, inputs)
                 action = outputs[0][0]
                 last_action = action.tolist()
