@@ -71,7 +71,7 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
     def get_orientation_quat(env: ManagerBasedRlEnv) -> torch.Tensor:
         """Get the robot's trunk orientation as a quaternion with non-negative w."""
         quat = env.sim.data.qpos[:, 3:7]
-        quat = torch.where(quat[:, 0] < 0, -quat, quat)
+        quat = torch.where(quat[:, 0:1] < 0, -quat, quat)
         return quat
 
     policy_terms = {
