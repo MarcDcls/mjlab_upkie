@@ -10,8 +10,10 @@ description = "Reinforcement learning environments for the Upkie robot based on 
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
+    "matplotlib>=3.10.8",
     "mjlab",
     "onnxruntime",
+    "pyqt5>=5.15.11",
 ]
 
 [project.entry-points."mjlab.tasks"]

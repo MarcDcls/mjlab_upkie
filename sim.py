@@ -40,6 +40,7 @@ gyro_buffer = [[0.0] * 3] * buffer_size
 # Zero velocity management
 world_target: list[float] = [0.0, 0.0, 0.0]
 
+
 def reset_robot(model, data, yaw=0.0):
     """Reset robot to default pose with specified yaw orientation."""
     global world_target
@@ -228,6 +229,26 @@ def get_corrected_command(command, data, kp_pos=3.0, kv_pos=1.0, kp_yaw=1.0, kv_
     return corrected_command
 
 
+def log(data, t, observation, action):
+    """Log observations and actions for each servo."""
+    data["timestamps"].append(t)
+
+    data["left_hip"]["observation"].append(float(observation[0]))
+    data["left_knee"]["observation"].append(float(observation[1]))
+    data["right_hip"]["observation"].append(float(observation[2]))
+    data["right_knee"]["observation"].append(float(observation[3]))
+    data["left_wheel"]["observation"].append(float(observation[4]))
+    data["right_wheel"]["observation"].append(float(observation[5]))
+
+    action = action.tolist()
+    data["left_hip"]["action"].append(float(action[0]) + DEFAULT_POSE["left_hip"])
+    data["left_knee"]["action"].append(float(action[1]) + DEFAULT_POSE["left_knee"])
+    data["right_hip"]["action"].append(float(action[2]) + DEFAULT_POSE["right_hip"])
+    data["right_knee"]["action"].append(float(action[3]) + DEFAULT_POSE["right_knee"])
+    data["left_wheel"]["action"].append(float(action[4]) * wheel_action_scale + DEFAULT_POSE["left_wheel"])
+    data["right_wheel"]["action"].append(float(action[5]) * wheel_action_scale + DEFAULT_POSE["right_wheel"])
+
+
 if __name__ == "__main__":
     import onnxruntime as ort
     import onnx
@@ -235,6 +256,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-o", "--onnx-model-path", type=str, default="logs/rsl_rl/upkie_velocity/bests/default.onnx")
     parser.add_argument("-d", "--delay", action="store_true", help="Whether to use delayed observations to simulate sensor latency.")
+    parser.add_argument("--log", action="store_true", help="Whether to log servo observations and actions for analysis.")
     args = parser.parse_args()
 
     onnx_model = onnx.load(args.onnx_model_path)
@@ -252,6 +274,17 @@ if __name__ == "__main__":
     model.opt.timestep = 0.005  # 200 Hz simulation
     inf_period = 4  # 50 Hz inference
     step_counter = 0
+
+    if args.log:
+        servo_data = {
+            "timestamps": [],
+            "left_hip": {"observation": [], "action": []},
+            "left_knee": {"observation": [], "action": []},
+            "right_hip": {"observation": [], "action": []},
+            "right_knee": {"observation": [], "action": []},
+            "left_wheel": {"observation": [], "action": []},
+            "right_wheel": {"observation": [], "action": []},
+        }
 
     reset_robot(model, data, yaw=random.uniform(0, 2*np.pi))
     last_action = [0.0] * 6
@@ -275,6 +308,10 @@ if __name__ == "__main__":
                 action = outputs[0][0]
                 last_action = action.tolist()
 
+                # Log data
+                if args.log:
+                    log(servo_data, step_start, inputs["obs"][0], action)
+
                 # Apply action
                 data.ctrl[LEFT_HIP] = action[0] + DEFAULT_POSE["left_hip"]
                 data.ctrl[LEFT_KNEE] = action[1] + DEFAULT_POSE["left_knee"]
@@ -296,3 +333,12 @@ if __name__ == "__main__":
             time_until_next_step = model.opt.timestep - (time.time() - step_start)
             if time_until_next_step > 0:
                 time.sleep(time_until_next_step)
+
+    # Save logged data
+    if args.log:
+        import json
+
+        filename = f"logs/sim/servo_data_log_{int(time.time())}.json"
+        with open(filename, "w") as f:
+            json.dump(servo_data, f, indent=2)
+        print(f"Logged servo data saved to {filename}")
