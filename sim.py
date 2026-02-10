@@ -31,6 +31,7 @@ wheel_action_scale: float = 100.0
 command: list[float] = [0.0, 0.0, 0.0]  
 
 # Sensor delay buffers
+# Measured delays: joint positions 40ms, wheel velocities ?, IMU quaternions ?, gyro readings ?
 buffer_size = 2
 joint_pos_buffer = [[0.0] * 4] * buffer_size 
 joint_vel_buffer = [[0.0] * 2] * buffer_size
