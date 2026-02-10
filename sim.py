@@ -240,7 +240,6 @@ def log(data, t, observation, action):
     data["left_wheel"]["observation"].append(float(observation[4]))
     data["right_wheel"]["observation"].append(float(observation[5]))
 
-    action = action.tolist()
     data["left_hip"]["action"].append(float(action[0]) + DEFAULT_POSE["left_hip"])
     data["left_knee"]["action"].append(float(action[1]) + DEFAULT_POSE["left_knee"])
     data["right_hip"]["action"].append(float(action[2]) + DEFAULT_POSE["right_hip"])
