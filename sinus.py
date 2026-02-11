@@ -7,7 +7,6 @@
 #     http://www.apache.org/licenses/LICENSE-2.0
 
 import time
-import contextlib
 import mujoco
 import argparse
 import mujoco.viewer
@@ -19,11 +18,9 @@ from mjlab_upkie.robot.upkie_constants import (
     LEFT_WHEEL,
     RIGHT_HIP,
     RIGHT_KNEE,
-    RIGHT_WHEEL,    
+    RIGHT_WHEEL,
+    UPKIE_MODEL_PATH,
 )
-
-robot_path: str = "src/mjlab_upkie/robot/upkie/scene.xml"
-
 
 def fix_robot(model, data, height: float=1.0):
     """Set the robot in a fixed position for testing."""
@@ -92,10 +89,10 @@ if __name__ == "__main__":
     parser.add_argument("--position", action="store_true", help="Whether to log position observations and actions.")
     parser.add_argument("--velocity", action="store_true", help="Whether to log velocity observations and actions.")
     parser.add_argument("--log", action="store_true", help="Whether to log servo observations and actions for analysis.")
-    parser.add_argument("--viewer", action="store_true", help="Run without MuJoCo viewer.")
+    parser.add_argument("--viewer", action="store_true", help="Run with MuJoCo viewer.")
     args = parser.parse_args()
 
-    model: mujoco.MjModel = mujoco.MjModel.from_xml_path(robot_path)
+    model: mujoco.MjModel = mujoco.MjModel.from_xml_path(UPKIE_MODEL_PATH)
     data: mujoco.MjData = mujoco.MjData(model)
 
     model.opt.timestep = 0.005  # 200 Hz simulation
@@ -105,13 +102,11 @@ if __name__ == "__main__":
     if args.log:
         servo_data = {"timestamp": [], "read": [], "target": []}
 
-    viewer_context = (
-        contextlib.nullcontext(None)
-        if not args.viewer
-        else mujoco.viewer.launch_passive(model, data)
-    )
+    viewer = None
+    try:
+        if args.viewer:
+            viewer = mujoco.viewer.launch_passive(model, data)
 
-    with viewer_context as viewer:
         fix_robot(model, data)
         mujoco.mj_step(model, data)
 
@@ -120,7 +115,7 @@ if __name__ == "__main__":
 
         t = 0
         t_start = time.perf_counter()
-        while t < 2.0 and (viewer is None or viewer.is_running()):
+        while t < 12.0 and (viewer is None or viewer.is_running()):
             
             # 50 Hz control loop
             if step_counter % inf_period == 0:
@@ -158,6 +153,10 @@ if __name__ == "__main__":
             time_until_next_step = (t_start + t) - time.perf_counter()
             if time_until_next_step > 0:
                 time.sleep(time_until_next_step)
+
+    finally:
+        if viewer is not None and viewer.is_running():
+            viewer.close()
 
     # Save logged data
     if args.log and (args.position or args.velocity):
