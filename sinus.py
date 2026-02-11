@@ -7,6 +7,7 @@
 #     http://www.apache.org/licenses/LICENSE-2.0
 
 import time
+import contextlib
 import mujoco
 import argparse
 import mujoco.viewer
@@ -22,7 +23,6 @@ from mjlab_upkie.robot.upkie_constants import (
 )
 
 robot_path: str = "src/mjlab_upkie/robot/upkie/scene.xml"
-wheel_action_scale: float = 100.0 
 
 
 def fix_robot(model, data, height: float=1.0):
@@ -83,15 +83,16 @@ def log(data, t, observation, action, position: bool = False, velocity: bool = F
         data["target"].append(float(action[1]))
     elif velocity:
         data["read"].append(float(observation[5]))
-        data["target"].append(float(action[5]) * wheel_action_scale)
+        data["target"].append(float(action[5]))
 
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--position", action="store_true", help="Whether to log position observations and actions.")
-    parser.add_argument("-v", "--velocity", action="store_true", help="Whether to log velocity observations and actions.")
+    parser.add_argument("--position", action="store_true", help="Whether to log position observations and actions.")
+    parser.add_argument("--velocity", action="store_true", help="Whether to log velocity observations and actions.")
     parser.add_argument("--log", action="store_true", help="Whether to log servo observations and actions for analysis.")
+    parser.add_argument("--viewer", action="store_true", help="Run without MuJoCo viewer.")
     args = parser.parse_args()
 
     model: mujoco.MjModel = mujoco.MjModel.from_xml_path(robot_path)
@@ -104,52 +105,59 @@ if __name__ == "__main__":
     if args.log:
         servo_data = {"timestamp": [], "read": [], "target": []}
 
-    viewer = mujoco.viewer.launch_passive(model, data)
+    viewer_context = (
+        contextlib.nullcontext(None)
+        if not args.viewer
+        else mujoco.viewer.launch_passive(model, data)
+    )
 
-    fix_robot(model, data)
-    mujoco.mj_step(model, data)
-    viewer.sync()
-
-    t = 0
-    t_start = time.perf_counter()
-    while t < 12.0:
-        
+    with viewer_context as viewer:
         fix_robot(model, data)
-
-        # 50 Hz control loop
-        if step_counter % inf_period == 0:
-
-            observation = get_inputs(model, data, last_action=np.zeros(6), command=np.zeros(3))["obs"][0]
-
-            position = 0.0
-            velocity = 0.0
-            if args.position:
-                position = np.sin(t * np.pi) * 0.3
-            elif args.velocity:
-                velocity = np.sin(t * np.pi / 2) * 6.0
-
-            action = np.array([0.0, position, 0.0, 0.0, 0.0, velocity], dtype=np.float32)
-
-            data.ctrl[LEFT_HIP] = action[0]
-            data.ctrl[LEFT_KNEE] = action[1]
-            data.ctrl[RIGHT_HIP] = action[2]
-            data.ctrl[RIGHT_KNEE] = action[3]
-            data.ctrl[LEFT_WHEEL] = action[4]
-            data.ctrl[RIGHT_WHEEL] = action[5]
-
-            # Log data
-            if args.log:
-                log(servo_data, t, observation, action, position=args.position, velocity=args.velocity)
-
-        # Step simulation
         mujoco.mj_step(model, data)
-        viewer.sync()
-        step_counter += 1
 
-        t += model.opt.timestep
-        time_until_next_step = (t_start + t) - time.perf_counter()
-        if time_until_next_step > 0:
-            time.sleep(time_until_next_step)
+        if viewer is not None:
+            viewer.sync()
+
+        t = 0
+        t_start = time.perf_counter()
+        while t < 2.0 and (viewer is None or viewer.is_running()):
+            
+            # 50 Hz control loop
+            if step_counter % inf_period == 0:
+
+                observation = get_inputs(model, data, last_action=np.zeros(6), command=np.zeros(3))["obs"][0]
+
+                position = 0.0
+                velocity = 0.0
+                if args.position:
+                    position = np.sin(t * np.pi) * 0.3
+                elif args.velocity:
+                    velocity = np.sin(t * np.pi / 2) * 6.0
+
+                action = np.array([0.0, position, 0.0, 0.0, 0.0, velocity], dtype=np.float32)
+
+                data.ctrl[LEFT_HIP] = action[0]
+                data.ctrl[LEFT_KNEE] = action[1]
+                data.ctrl[RIGHT_HIP] = action[2]
+                data.ctrl[RIGHT_KNEE] = action[3]
+                data.ctrl[LEFT_WHEEL] = action[4]
+                data.ctrl[RIGHT_WHEEL] = action[5]
+
+                # Log data
+                if args.log:
+                    log(servo_data, t, observation, action, position=args.position, velocity=args.velocity)
+
+            fix_robot(model, data)
+            mujoco.mj_step(model, data)
+
+            if viewer is not None and viewer.is_running():
+                viewer.sync()
+
+            step_counter += 1
+            t += model.opt.timestep
+            time_until_next_step = (t_start + t) - time.perf_counter()
+            if time_until_next_step > 0:
+                time.sleep(time_until_next_step)
 
     # Save logged data
     if args.log and (args.position or args.velocity):
@@ -163,4 +171,3 @@ if __name__ == "__main__":
             json.dump(servo_data, f, indent=2)
         print(f"Logged servo data saved to {filename}")
 
-    viewer.close()
