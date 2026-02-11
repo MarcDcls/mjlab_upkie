@@ -12,6 +12,7 @@ import argparse
 import mujoco.viewer
 import numpy as np
 
+from sim import get_inputs
 from mjlab_upkie.robot.upkie_constants import (
     LEFT_HIP,
     LEFT_KNEE,
@@ -27,48 +28,6 @@ def fix_robot(model, data, height: float=1.0):
     data.qpos[:7] = np.array([0.0] * 7)
     data.qvel[:6] = np.array([0.0] * 6)
     data.qpos[2] = height
-
-
-def get_inputs(model, data, last_action, command):
-    """Prepare observation dictionary for ONNX model inference."""
-    obs = []
-
-    # Joint positions
-    joint_pos = [
-        data.qpos[7 + LEFT_HIP],
-        data.qpos[7 + LEFT_KNEE],
-        data.qpos[7 + RIGHT_HIP],
-        data.qpos[7 + RIGHT_KNEE],
-    ]
-    obs.extend(joint_pos)
-
-    # Wheel velocities
-    wheel_vel = [
-        data.qvel[6 + LEFT_WHEEL],
-        data.qvel[6 + RIGHT_WHEEL],
-    ]
-    obs.extend(wheel_vel)
-    
-    # IMU readings (quaternion)
-    quat = data.qpos[3:7] 
-    if quat[0] < 0: 
-        quat = -quat
-    obs.extend(quat)    
-    
-    # Gyro readings
-    obs.extend(data.qvel[3:6])
-
-    # Last action
-    obs.extend(last_action)
-
-    # Command
-    obs.extend(command)
-
-    return {
-        "obs": [
-            np.array(obs, dtype=np.float32),
-        ]
-    }
 
 
 def log(data, t, observation, action, position: bool = False, velocity: bool = False):
