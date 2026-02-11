@@ -24,8 +24,7 @@ class MujocoModelWrapper:
         self.model = model
         self.data = data
         self.actuator_idx = actuator_idx
-
-        # Setting the armature
+        
 
     def set_parameters(self, frictionloss: float, damping: float, armature: float):
         """
