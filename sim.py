@@ -22,10 +22,10 @@ from mjlab_upkie.robot.upkie_constants import (
     RIGHT_HIP,
     RIGHT_KNEE,
     RIGHT_WHEEL,    
+    UPKIE_MODEL_PATH,
+    WHEEL_ACTION_SCALE,
 )
 
-robot_path: str = "src/mjlab_upkie/robot/upkie/scene.xml"
-wheel_action_scale: float = 100.0
 
 # Global command variable
 command: list[float] = [0.0, 0.0, 0.0]  
@@ -245,8 +245,8 @@ def log(data, t, observation, action):
     data["left_knee"]["action"].append(float(action[1]) + DEFAULT_POSE["left_knee"])
     data["right_hip"]["action"].append(float(action[2]) + DEFAULT_POSE["right_hip"])
     data["right_knee"]["action"].append(float(action[3]) + DEFAULT_POSE["right_knee"])
-    data["left_wheel"]["action"].append(float(action[4]) * wheel_action_scale + DEFAULT_POSE["left_wheel"])
-    data["right_wheel"]["action"].append(float(action[5]) * wheel_action_scale + DEFAULT_POSE["right_wheel"])
+    data["left_wheel"]["action"].append(float(action[4]) * WHEEL_ACTION_SCALE + DEFAULT_POSE["left_wheel"])
+    data["right_wheel"]["action"].append(float(action[5]) * WHEEL_ACTION_SCALE + DEFAULT_POSE["right_wheel"])
 
 
 if __name__ == "__main__":
@@ -268,7 +268,7 @@ if __name__ == "__main__":
     for key, value in meta.custom_metadata_map.items():
         print(f"  {key}: {value}")
 
-    model: mujoco.MjModel = mujoco.MjModel.from_xml_path(robot_path)
+    model: mujoco.MjModel = mujoco.MjModel.from_xml_path(UPKIE_MODEL_PATH)
     data: mujoco.MjData = mujoco.MjData(model)
 
     model.opt.timestep = 0.005  # 200 Hz simulation
@@ -317,8 +317,8 @@ if __name__ == "__main__":
                 data.ctrl[LEFT_KNEE] = action[1] + DEFAULT_POSE["left_knee"]
                 data.ctrl[RIGHT_HIP] = action[2] + DEFAULT_POSE["right_hip"]
                 data.ctrl[RIGHT_KNEE] = action[3] + DEFAULT_POSE["right_knee"]
-                data.ctrl[LEFT_WHEEL] = action[4] * wheel_action_scale
-                data.ctrl[RIGHT_WHEEL] = action[5] * wheel_action_scale
+                data.ctrl[LEFT_WHEEL] = action[4] * WHEEL_ACTION_SCALE
+                data.ctrl[RIGHT_WHEEL] = action[5] * WHEEL_ACTION_SCALE
 
             # Step simulation
             mujoco.mj_step(model, data)

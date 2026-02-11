@@ -48,6 +48,7 @@ from mjlab_upkie.robot.upkie_constants import (
     VEL_CTRL_JOINT_IDS,
     VIEWER_CONFIG,
     SIM_CFG,
+    WHEEL_ACTION_SCALE,
 )
 
 SCENE_CFG = SceneCfg(
@@ -130,7 +131,7 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
         "joint_vel": JointVelocityActionCfg(
             asset_name="robot",
             actuator_names=tuple(VEL_CTRL_JOINT_NAMES),
-            scale=100.0,
+            scale=WHEEL_ACTION_SCALE,
             use_default_offset=True,
         ),
     }

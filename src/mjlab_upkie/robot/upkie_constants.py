@@ -20,10 +20,10 @@ from mjlab.viewer import ViewerConfig
 UPKIE_XML: Path = Path(os.path.dirname(__file__)) / "upkie/robot.xml"
 assert UPKIE_XML.exists(), f"XML not found: {UPKIE_XML}"
 
-
 def get_spec() -> mujoco.MjSpec:
     return mujoco.MjSpec.from_file(str(UPKIE_XML))
 
+UPKIE_MODEL_PATH = "src/mjlab_upkie/robot/upkie/scene.xml"
 
 POS_CTRL_JOINT_NAMES = ["left_hip", "left_knee", "right_hip", "right_knee"]
 VEL_CTRL_JOINT_NAMES = ["left_wheel", "right_wheel"]
@@ -37,6 +37,8 @@ RIGHT_WHEEL = 5
 
 POS_CTRL_JOINT_IDS = np.array([LEFT_HIP, LEFT_KNEE, RIGHT_HIP, RIGHT_KNEE])
 VEL_CTRL_JOINT_IDS = np.array([LEFT_WHEEL, RIGHT_WHEEL])
+
+WHEEL_ACTION_SCALE = 100.0
 
 DEFAULT_POSE = {
     "left_hip": 0.0,
