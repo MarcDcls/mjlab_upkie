@@ -39,15 +39,17 @@ from mjlab.envs.mdp.actions import JointPositionActionCfg, JointVelocityActionCf
 from mjlab.tasks.velocity.mdp import UniformVelocityCommandCfg
 from mjlab.sensor import ContactMatch, ContactSensorCfg
 
-from mjlab_upkie.robot.upkie_constants import (
+from mjlab_upkie.robot.upkie_cfg import (
     DEFAULT_UPKIE_CFG,
+    VIEWER_CONFIG,
+    SIM_CFG,
+)
+from mjlab_upkie.robot.upkie_constants import (
     DEFAULT_POSE,
     POS_CTRL_JOINT_NAMES,
     VEL_CTRL_JOINT_NAMES,
     POS_CTRL_JOINT_IDS,
     VEL_CTRL_JOINT_IDS,
-    VIEWER_CONFIG,
-    SIM_CFG,
     WHEEL_ACTION_SCALE,
 )
 

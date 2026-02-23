@@ -12,7 +12,7 @@ import argparse
 import mujoco.viewer
 import numpy as np
 
-from sim import get_inputs
+from mjlab_upkie.sim import get_inputs
 from mjlab_upkie.robot.upkie_constants import (
     LEFT_HIP,
     LEFT_KNEE,
