@@ -16,6 +16,9 @@ dependencies = [
     "pyqt5>=5.15.11",
 ]
 
+[project.scripts]
+sim = "mjlab_upkie.sim:main"
+
 [project.entry-points."mjlab.tasks"]
 mjlab_upkie = "mjlab_upkie.tasks"
 

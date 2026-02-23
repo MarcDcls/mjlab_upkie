@@ -249,7 +249,7 @@ def log(data, t, observation, action):
     data["right_wheel"]["action"].append(float(action[5]) * WHEEL_ACTION_SCALE + DEFAULT_POSE["right_wheel"])
 
 
-if __name__ == "__main__":
+def main():
     import onnxruntime as ort
     import onnx
 
@@ -342,3 +342,7 @@ if __name__ == "__main__":
         with open(filename, "w") as f:
             json.dump(servo_data, f, indent=2)
         print(f"Logged servo data saved to {filename}")
+
+
+if __name__ == "__main__":
+    main()
