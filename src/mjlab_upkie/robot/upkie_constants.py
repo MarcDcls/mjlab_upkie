@@ -6,6 +6,8 @@
 
 #     http://www.apache.org/licenses/LICENSE-2.0
 
+"""Constants for the Upkie robot."""
+
 from pathlib import Path
 import numpy as np
 

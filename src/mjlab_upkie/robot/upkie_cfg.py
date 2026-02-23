@@ -6,6 +6,8 @@
 
 #     http://www.apache.org/licenses/LICENSE-2.0
 
+"""Mjlab configurations for Upkie."""
+
 import mujoco
 
 from mjlab.entity import EntityCfg, EntityArticulationInfoCfg

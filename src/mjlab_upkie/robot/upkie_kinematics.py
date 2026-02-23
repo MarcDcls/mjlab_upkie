@@ -6,6 +6,8 @@
 
 #     http://www.apache.org/licenses/LICENSE-2.0
 
+"""Kinematics functions for the Upkie robot."""
+
 WHEEL_RADIUS = 0.055  # meters
 BASE_WHEEL_DISTANCE = 0.16  # meters (half the distance between wheels)
 

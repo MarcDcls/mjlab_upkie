@@ -6,7 +6,7 @@
 
 #     http://www.apache.org/licenses/LICENSE-2.0
 
-"""Simulate the Upkie robot in MuJoCo and run an ONNX model for control inference, with optional logging and keyboard command input."""
+"""Simulate the Upkie robot in MuJoCo and run an ONNX model for control inference."""
 
 import time
 import mujoco
