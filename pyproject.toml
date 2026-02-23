@@ -13,11 +13,16 @@ dependencies = [
     "matplotlib>=3.10.8",
     "mjlab",
     "onnxruntime",
+    "optuna>=4.7.0",
     "pyqt5>=5.15.11",
 ]
 
 [project.scripts]
 sim = "mjlab_upkie.sim:main"
+fit = "mjlab_upkie.identification.fit:main"
+resample = "mjlab_upkie.identification.resample:main"
+plot = "mjlab_upkie.identification.plot:main"
+simulate = "mjlab_upkie.identification.simulate:main"
 
 [project.entry-points."mjlab.tasks"]
 mjlab_upkie = "mjlab_upkie.tasks"
