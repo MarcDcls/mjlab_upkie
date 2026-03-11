@@ -134,6 +134,7 @@ To cite this repository in your publications:
     month = feb,
     title = {{Mjlab-Upkie: Reinforcement learning environments for a biped on wheels}},
     url = {https://github.com/MarcDcls/mjlab_upkie},
+    howpublished = "\url{https://github.com/MarcDcls/mjlab_upkie}",
     version = {1.0.1},
     year = {2026}
 }
