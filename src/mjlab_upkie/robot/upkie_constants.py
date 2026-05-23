@@ -12,7 +12,7 @@ import numpy as np
 
 import os
 from mjlab.entity import EntityCfg, EntityArticulationInfoCfg
-from mjlab.actuator import XmlPositionActuatorCfg, XmlVelocityActuatorCfg
+from mjlab.actuator import XmlActuatorCfg
 from mjlab.utils.spec_config import CollisionCfg
 from mjlab.sim import MujocoCfg, SimulationCfg
 from mjlab.viewer import ViewerConfig
@@ -58,8 +58,8 @@ FULL_COLLISION = CollisionCfg(
 
 ARTICULATION_CFG = EntityArticulationInfoCfg(
     actuators=(
-        XmlPositionActuatorCfg(joint_names_expr=tuple(POS_CTRL_JOINT_NAMES)),
-        XmlVelocityActuatorCfg(joint_names_expr=tuple(VEL_CTRL_JOINT_NAMES)),
+        XmlActuatorCfg(target_names_expr=tuple(POS_CTRL_JOINT_NAMES)),
+        XmlActuatorCfg(target_names_expr=tuple(VEL_CTRL_JOINT_NAMES)),
     ),
 )
 
@@ -76,7 +76,7 @@ DEFAULT_UPKIE_CFG = EntityCfg(
 
 VIEWER_CONFIG = ViewerConfig(
     origin_type=ViewerConfig.OriginType.ASSET_BODY,
-    asset_name="robot",
+    entity_name="robot",
     body_name="trunk",
     distance=3.0,
     elevation=-15.0,

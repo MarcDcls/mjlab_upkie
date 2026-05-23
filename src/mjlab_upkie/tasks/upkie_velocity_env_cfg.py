@@ -15,24 +15,19 @@ from xml.dom.minidom import Entity
 import torch
 
 from mjlab.envs import mdp, ManagerBasedRlEnv, ManagerBasedRlEnvCfg
-from mjlab.managers.manager_term_config import (
-    ActionTermCfg,
-    CommandTermCfg,
-    CurriculumTermCfg,
-    EventTermCfg,
-    ObservationGroupCfg,
-    ObservationTermCfg,
-    RewardTermCfg,
-    TerminationTermCfg,
-)
+from mjlab.managers.action_manager import ActionTermCfg
+from mjlab.managers.command_manager import CommandTermCfg
+from mjlab.managers.curriculum_manager import CurriculumTermCfg
+from mjlab.managers.event_manager import EventTermCfg
+from mjlab.managers.observation_manager import ObservationGroupCfg, ObservationTermCfg
+from mjlab.managers.reward_manager import RewardTermCfg
+from mjlab.managers.termination_manager import TerminationTermCfg
+
 from mjlab.utils.noise import UniformNoiseCfg as Unoise
 from mjlab.scene import SceneCfg
-from mjlab.terrains import TerrainImporterCfg
-from mjlab.terrains.config import ROUGH_TERRAINS_CFG
-from mjlab.sim import MujocoCfg, SimulationCfg
-from mjlab.viewer import ViewerConfig
+from mjlab.terrains import TerrainEntityCfg
 from mjlab.managers.scene_entity_config import SceneEntityCfg
-from mjlab.rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, RslRlPpoAlgorithmCfg
+from mjlab.rl import RslRlOnPolicyRunnerCfg, RslRlModelCfg, RslRlPpoAlgorithmCfg
 from mjlab.utils.lab_api.math import sample_uniform, quat_apply_inverse
 from mjlab.tasks.velocity import mdp as mdp_vel
 from mjlab.envs.mdp.actions import JointPositionActionCfg, JointVelocityActionCfg
@@ -51,13 +46,7 @@ from mjlab_upkie.robot.upkie_constants import (
 )
 
 SCENE_CFG = SceneCfg(
-    terrain=TerrainImporterCfg(
-        terrain_type="plane",
-        terrain_generator=None,
-        # terrain_type="generator",
-        # terrain_generator=ROUGH_TERRAINS_CFG,
-        max_init_terrain_level=0,
-    ),
+    terrain=TerrainEntityCfg(terrain_type="plane"),
     num_envs=1,
     extent=2.0,
 )
@@ -106,7 +95,7 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
     }
 
     observations = {
-        "policy": ObservationGroupCfg(
+        "actor": ObservationGroupCfg(
             terms=policy_terms,
             concatenate_terms=True,
             enable_corruption=False if play else True,
@@ -122,13 +111,13 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
 
     actions: dict[str, ActionTermCfg] = {
         "joint_pos": JointPositionActionCfg(
-            asset_name="robot",
+            entity_name="robot",
             actuator_names=tuple(POS_CTRL_JOINT_NAMES),
             scale=1.0,
             use_default_offset=True,
         ),
         "joint_vel": JointVelocityActionCfg(
-            asset_name="robot",
+            entity_name="robot",
             actuator_names=tuple(VEL_CTRL_JOINT_NAMES),
             scale=100.0,
             use_default_offset=True,
@@ -139,7 +128,7 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
 
     commands: dict[str, CommandTermCfg] = {
         "twist": UniformVelocityCommandCfg(
-            asset_name="robot",
+            entity_name="robot",
             resampling_time_range=(3.0, 8.0),
             rel_standing_envs=1.0 if static else 0.1,
             rel_heading_envs=0.0,
@@ -211,13 +200,12 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
         ),
         "foot_friction": EventTermCfg(
             mode="startup",
-            func=mdp.randomize_field,
-            domain_randomization=True,
+            func=mdp.dr.geom_friction,
             params={
                 "asset_cfg": SceneEntityCfg("robot", geom_names=("left_foot_collision", "right_foot_collision")),
                 "operation": "abs",
-                "field": "geom_friction",
                 "ranges": (0.8, 1.2),
+                "shared_random": True,
             },
         ),
         # "print_debug": EventTermCfg(
@@ -261,7 +249,7 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
             },
         ),
         "upright": RewardTermCfg(
-            func=mdp_vel.flat_orientation,
+            func=mdp_vel.upright,
             weight=1.0,
             params={
                 "std": math.sqrt(0.2),
@@ -347,7 +335,7 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
         events=events,
         rewards=rewards,
         terminations=terminations,
-        curriculum=curriculum if not play else None,
+        curriculum=curriculum if not play else {},
         decimation=4,
         episode_length_s=20.0 if not play else 10000.0,
     )
@@ -393,36 +381,39 @@ def upkie_velocity_env_cfg(play: bool = False, static: bool = False) -> ManagerB
     return cfg
 
 
-@dataclass
-class UpkieRlCfg(RslRlOnPolicyRunnerCfg):
-    policy: RslRlPpoActorCriticCfg = field(
-        default_factory=lambda: RslRlPpoActorCriticCfg(
-            init_noise_std=1.0,
-            actor_obs_normalization=False,
-            critic_obs_normalization=False,
-            actor_hidden_dims=(512, 256, 128),
-            critic_hidden_dims=(512, 256, 128),
-            activation="elu",
-        )
-    )
-    algorithm: RslRlPpoAlgorithmCfg = field(
-        default_factory=lambda: RslRlPpoAlgorithmCfg(
-            value_loss_coef=1.0,
-            use_clipped_value_loss=True,
-            clip_param=0.2,
-            entropy_coef=0.01,
-            num_learning_epochs=5,
-            num_mini_batches=4,
-            learning_rate=1.0e-3,
-            schedule="adaptive",
-            gamma=0.99,
-            lam=0.95,
-            desired_kl=0.01,
-            max_grad_norm=1.0,
-        )
-    )
-    wandb_project: str = "mjlab_upkie"
-    experiment_name: str = "upkie_velocity"
-    save_interval: int = 5000
-    num_steps_per_env: int = 24
-    max_iterations: int = 60_000
+UpkieVelocityRlCfg = RslRlOnPolicyRunnerCfg(
+    actor=RslRlModelCfg(
+        hidden_dims=(512, 256, 128),
+        activation="elu",
+        obs_normalization=False,
+        distribution_cfg={
+            "class_name": "GaussianDistribution",
+            "init_std": 1.0,
+            "std_type": "scalar",
+        },
+    ),
+    critic=RslRlModelCfg(
+        hidden_dims=(512, 256, 128),
+        activation="elu",
+        obs_normalization=False,
+    ),
+    algorithm=RslRlPpoAlgorithmCfg(
+        value_loss_coef=1.0,
+        use_clipped_value_loss=True,
+        clip_param=0.2,
+        entropy_coef=0.01,
+        num_learning_epochs=5,
+        num_mini_batches=4,
+        learning_rate=1.0e-3,
+        schedule="adaptive",
+        gamma=0.99,
+        lam=0.95,
+        desired_kl=0.01,
+        max_grad_norm=1.0,
+    ),
+    wandb_project="mjlab_upkie",
+    experiment_name="upkie_velocity",
+    save_interval=5000,
+    num_steps_per_env=24,
+    max_iterations=60_000,
+)
